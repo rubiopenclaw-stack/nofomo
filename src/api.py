@@ -1,10 +1,12 @@
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import yfinance as yf
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 from pathlib import Path
 import logging
+import time
+from functools import lru_cache
 
 # Setup logging
 LOG_DIR = Path(__file__).parent / 'logs'
@@ -31,8 +33,34 @@ PORTFOLIO_FILE = DATA_DIR / 'portfolio.json'
 
 TRADES_DIR.mkdir(parents=True, exist_ok=True)
 
+# Simple in-memory cache
+_price_cache = {}
+_cache_ttl = 60  # 60 seconds TTL for prices
+
+
+def _get_cached(ticker, cache_type='price'):
+    """Get cached data if still valid"""
+    key = f"{cache_type}:{ticker.upper()}"
+    if key in _price_cache:
+        data, timestamp = _price_cache[key]
+        if time.time() - timestamp < _cache_ttl:
+            return data
+    return None
+
+
+def _set_cached(ticker, cache_type, data):
+    """Set cached data"""
+    key = f"{cache_type}:{ticker.upper()}"
+    _price_cache[key] = (data, time.time())
+
 
 def get_stock_price(ticker):
+    # Check cache first
+    cached = _get_cached(ticker, 'price')
+    if cached:
+        logger.info(f'Cache hit: {ticker}')
+        return cached
+    
     try:
         stock = yf.Ticker(ticker)
         hist = stock.history(period='1d')
@@ -42,7 +70,7 @@ def get_stock_price(ticker):
         current_price = float(hist['Close'].iloc[-1])
         info = stock.info
         
-        return {
+        result = {
             'ticker': ticker.upper(),
             'current_price': current_price,
             'currency': info.get('currency', 'USD'),
@@ -52,11 +80,21 @@ def get_stock_price(ticker):
             'volume': info.get('volume', 0),
             'timestamp': datetime.now().isoformat()
         }
+        
+        # Cache the result
+        _set_cached(ticker, 'price', result)
+        return result
     except Exception as e:
         return {'error': str(e)}
 
 
 def technical_analysis(ticker):
+    # Check cache first (5 min TTL for analysis)
+    cached = _get_cached(ticker, 'analysis')
+    if cached:
+        logger.info(f'Analysis cache hit: {ticker}')
+        return cached
+    
     try:
         stock = yf.Ticker(ticker)
         df = stock.history(period='3mo')
@@ -97,7 +135,7 @@ def technical_analysis(ticker):
         
         score = max(1, min(5, score))
         
-        return {
+        result = {
             'current_price': current_price,
             'ma5': ma5, 'ma20': ma20, 'ma60': ma60,
             'rsi': rsi,
@@ -108,11 +146,37 @@ def technical_analysis(ticker):
             'rating': '⭐' * score,
             'timestamp': datetime.now().isoformat()
         }
+        
+        # Cache the result (5 min TTL)
+        key = f"analysis:{ticker.upper()}"
+        _price_cache[key] = (result, time.time())
+        
+        return result
     except Exception as e:
         return {'error': str(e)}
 
 
 # API Routes
+@app.route('/api/health')
+def health():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'ok',
+        'timestamp': datetime.now().isoformat(),
+        'cache_size': len(_price_cache),
+        'cache_ttl': {'price': _cache_ttl, 'analysis': 300}
+    })
+
+
+@app.route('/api/cache/clear', methods=['POST'])
+def clear_cache():
+    """Clear the cache"""
+    global _price_cache
+    _price_cache = {}
+    logger.info('Cache cleared')
+    return jsonify({'success': True, 'message': 'Cache cleared'})
+
+
 @app.route('/api/quote')
 def quote():
     ticker = request.args.get('ticker', '').upper()

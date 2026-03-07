@@ -12,3 +12,20 @@
 2026-03-08 00:03:40,962 - INFO - Analyze request: NVDA
 2026-03-08 00:03:41,496 - INFO - Analyze success: NVDA score=3
 2026-03-08 00:03:41,497 - INFO - 127.0.0.1 - - [08/Mar/2026 00:03:41] "GET /api/analyze?ticker=NVDA HTTP/1.1" 200 -
+2026-03-08 00:03:51,343 - INFO - Quote request: MSFT
+2026-03-08 00:03:51,783 - INFO - 127.0.0.1 - - [08/Mar/2026 00:03:51] "GET /api/quote?ticker=MSFT HTTP/1.1" 200 -
+2026-03-08 01:03:09,012 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.33.17:5000
+2026-03-08 01:03:09,013 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-08 01:03:09,022 - INFO -  * Restarting with stat
+2026-03-08 01:03:10,131 - WARNING -  * Debugger is active!
+2026-03-08 01:03:10,158 - INFO -  * Debugger PIN: 129-705-764
+2026-03-08 01:03:10,268 - INFO - 127.0.0.1 - - [08/Mar/2026 01:03:10] "GET /api/health HTTP/1.1" 200 -
+2026-03-08 01:03:35,304 - INFO - Quote request: AAPL
+2026-03-08 01:03:37,372 - INFO - 127.0.0.1 - - [08/Mar/2026 01:03:37] "GET /api/quote?ticker=AAPL HTTP/1.1" 200 -
+2026-03-08 01:03:39,883 - INFO - Quote request: AAPL
+2026-03-08 01:03:39,883 - INFO - Cache hit: AAPL
+2026-03-08 01:03:39,883 - INFO - 127.0.0.1 - - [08/Mar/2026 01:03:39] "GET /api/quote?ticker=AAPL HTTP/1.1" 200 -
+2026-03-08 01:03:39,897 - INFO - 127.0.0.1 - - [08/Mar/2026 01:03:39] "GET /api/health HTTP/1.1" 200 -
