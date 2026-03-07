@@ -4,6 +4,20 @@ import yfinance as yf
 from datetime import datetime
 import json
 from pathlib import Path
+import logging
+
+# Setup logging
+LOG_DIR = Path(__file__).parent / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_DIR / 'api.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
@@ -103,16 +117,23 @@ def technical_analysis(ticker):
 def quote():
     ticker = request.args.get('ticker', '').upper()
     if not ticker:
+        logger.warning('Quote request missing ticker')
         return jsonify({'error': 'Missing ticker'})
-    return jsonify(get_stock_price(ticker))
+    logger.info(f'Quote request: {ticker}')
+    result = get_stock_price(ticker)
+    if 'error' in result:
+        logger.error(f'Quote error for {ticker}: {result["error"]}')
+    return jsonify(result)
 
 
 @app.route('/api/analyze')
 def analyze():
     ticker = request.args.get('ticker', '').upper()
     if not ticker:
+        logger.warning('Analyze request missing ticker')
         return jsonify({'error': 'Missing ticker'})
     
+    logger.info(f'Analyze request: {ticker}')
     analysis = technical_analysis(ticker)
     
     if 'error' not in analysis:
@@ -123,6 +144,9 @@ def analyze():
         
         scores = {5: '強烈買入', 4: '偏多買入', 3: '觀察等待', 2: '謹慎操作', 1: '不建議'}
         analysis['suggestion'] = scores.get(analysis['score'], '觀察等待')
+        logger.info(f'Analyze success: {ticker} score={analysis["score"]}')
+    else:
+        logger.error(f'Analyze error for {ticker}: {analysis["error"]}')
     
     return jsonify(analysis)
 
@@ -134,6 +158,7 @@ def get_trades():
         with open(f, 'r', encoding='utf-8') as fp:
             trades.append(json.load(fp))
     trades.sort(key=lambda x: x.get('date', ''), reverse=True)
+    logger.info(f'Get trades: {len(trades)} records')
     return jsonify(trades)
 
 
@@ -148,6 +173,7 @@ def add_trade():
     with open(filepath, 'w', encoding='utf-8') as fp:
         json.dump(data, fp, ensure_ascii=False, indent=2)
     
+    logger.info(f'New trade added: {data.get("ticker")} {data.get("action")} {data.get("quantity")}')
     return jsonify({'success': True, 'id': trade_id})
 
 

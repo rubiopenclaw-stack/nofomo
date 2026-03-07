@@ -1,0 +1,14 @@
+2026-03-08 00:03:23,236 - WARNING -  * Debugger is active!
+2026-03-08 00:03:23,274 - INFO -  * Debugger PIN: 140-217-909
+2026-03-08 00:03:25,136 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
+2026-03-08 00:03:26,620 - WARNING -  * Debugger is active!
+2026-03-08 00:03:26,655 - INFO -  * Debugger PIN: 140-217-909
+2026-03-08 00:03:32,677 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
+2026-03-08 00:03:34,412 - WARNING -  * Debugger is active!
+2026-03-08 00:03:34,455 - INFO -  * Debugger PIN: 140-217-909
+2026-03-08 00:03:38,906 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
+2026-03-08 00:03:40,677 - WARNING -  * Debugger is active!
+2026-03-08 00:03:40,709 - INFO -  * Debugger PIN: 140-217-909
+2026-03-08 00:03:40,962 - INFO - Analyze request: NVDA
+2026-03-08 00:03:41,496 - INFO - Analyze success: NVDA score=3
+2026-03-08 00:03:41,497 - INFO - 127.0.0.1 - - [08/Mar/2026 00:03:41] "GET /api/analyze?ticker=NVDA HTTP/1.1" 200 -
