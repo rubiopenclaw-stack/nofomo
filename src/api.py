@@ -562,6 +562,85 @@ def risk_assessment():
     })
 
 
+@app.route('/api/signals')
+def trading_signals():
+    """Generate trading signals for watchlist"""
+    signals = []
+    
+    for ticker in _watchlist[:5]:  # Limit to 5 for performance
+        try:
+            analysis = technical_analysis(ticker)
+            if 'error' not in analysis:
+                signal = {
+                    'ticker': ticker,
+                    'price': analysis['current_price'],
+                    'trend': analysis['trend'],
+                    'rsi': round(analysis['rsi'], 1),
+                    'score': analysis['score'],
+                    'suggestion': analysis['suggestion']
+                }
+                
+                # 交易訊號
+                if analysis['rsi'] < 30 and analysis['trend'] == 'BULLISH':
+                    signal['action'] = '🔥 強烈買入'
+                elif analysis['rsi'] < 40:
+                    signal['action'] = '📈 考慮買入'
+                elif analysis['rsi'] > 70:
+                    signal['action'] = '⚠️ 考慮賣出'
+                else:
+                    signal['action'] = '➡️ 觀望'
+                
+                signals.append(signal)
+        except Exception as e:
+            logger.error(f'Signal error: {ticker} {e}')
+    
+    logger.info(f'Signals generated: {len(signals)}')
+    return jsonify({
+        'signals': signals,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@app.route('/api/trades/analysis')
+def trades_analysis():
+    """Analyze trading history"""
+    trades = []
+    for f in TRADES_DIR.glob('*.json'):
+        with open(f, 'r', encoding='utf-8') as fp:
+            trades.append(json.load(fp))
+    
+    if not trades:
+        return jsonify({'message': 'No trades'})
+    
+    # Statistics
+    total_trades = len(trades)
+    buy_trades = [t for t in trades if t.get('action', '').lower() == 'buy']
+    sell_trades = [t for t in trades if t.get('action', '').lower() == 'sell']
+    
+    # By ticker
+    ticker_stats = {}
+    for trade in trades:
+        ticker = trade.get('ticker', '').upper()
+        if ticker not in ticker_stats:
+            ticker_stats[ticker] = {'buy': 0, 'sell': 0, 'total': 0}
+        ticker_stats[ticker][trade.get('action', '').lower()] += 1
+        ticker_stats[ticker]['total'] += 1
+    
+    # Recent activity
+    recent = sorted(trades, key=lambda x: x.get('created_at', ''), reverse=True)[:5]
+    
+    logger.info(f'Trades analysis: {total_trades} trades')
+    
+    return jsonify({
+        'total_trades': total_trades,
+        'buy_count': len(buy_trades),
+        'sell_count': len(sell_trades),
+        'by_ticker': ticker_stats,
+        'recent_trades': recent,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
 # Serve UI
 @app.route('/')
 def index():
