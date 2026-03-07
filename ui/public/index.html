@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#4F46E5" />
+    <title>📈 NoFOMO - 股票交易記錄</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+      :root {
+        --primary: #4F46E5;
+        --success: #10B981;
+        --danger: #EF4444;
+        --warning: #F59E0B;
+      }
+      body {
+        background: #F8FAFC;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      .chat-container {
+        height: calc(100vh - 200px);
+        overflow-y: auto;
+      }
+      .trade-card {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .trade-card.buy { border-left: 4px solid #10B981; }
+      .trade-card.sell { border-left: 4px solid #EF4444; }
+      .rating-star { color: #F59E0B; }
+      .pnl-positive { color: #10B981; }
+      .pnl-negative { color: #EF4444; }
+      .analysis-card {
+        background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+        border-radius: 12px;
+        padding: 16px;
+        margin: 12px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
+      
+      const API_BASE = 'https://variations-liabilities-atomic-suite.trycloudflare.com/api';
+      
+      function App() {
+        const [activeTab, setActiveTab] = useState('chat');
+        const [messages, setMessages] = useState([
+          { id: 1, role: 'assistant', content: '你好！我是 NoFOMO 📈\n\n告訴我你的交易，例如：\n• 「我買了 100 股 TSLA，成交價 200」\n• 「我賣了 50 股 NVDA，賣價 450」\n\n我會幫你查詢即時股價、給出技術分析建議，並記錄下來！' }
+        ]);
+        const [input, setInput] = useState('');
+        const [loading, setLoading] = useState(false);
+        const [trades, setTrades] = useState([]);
+        const [portfolio, setPortfolio] = useState(null);
+        const messagesEndRef = useRef(null);
+        
+        useEffect(() => {
+          loadData();
+        }, []);
+        
+        useEffect(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, [messages]);
+        
+        const loadData = async () => {
+          try {
+            const tradesRes = await axios.get(`${API_BASE}/trades`);
+            setTrades(tradesRes.data);
+            const portfolioRes = await axios.get(`${API_BASE}/portfolio`);
+            setPortfolio(portfolioRes.data);
+          } catch (e) {
+            console.log('API not available');
+          }
+        };
+        
+        const handleSend = async () => {
+          if (!input.trim() || loading) return;
+          
+          const userMessage = { id: Date.now(), role: 'user', content: input };
+          setMessages(prev => [...prev, userMessage]);
+          setInput('');
+          setLoading(true);
+          
+          try {
+            const response = await processMessage(input);
+            setMessages(prev => [...prev, { 
+              id: Date.now() + 1, 
+              role: 'assistant', 
+              content: response 
+            }]);
+          } catch (e) {
+            setMessages(prev => [...prev, { 
+              id: Date.now() + 1, 
+              role: 'assistant', 
+              content: '抱歉，處理過程中發生錯誤。請稍後再試。' 
+            }]);
+          }
+          
+          setLoading(false);
+          loadData();
+        };
+        
+        const processMessage = async (msg) => {
+          const upperMsg = msg.toUpperCase();
+          const lowerMsg = msg.toLowerCase();
+          
+          // 解析股票代號和價格
+          const tickerMatch = msg.match(/([A-Z]{1,5})/);
+          const priceMatch = msg.match(/\$?(\d+\.?\d*)/);
+          
+          // 買入交易
+          if (lowerMsg.includes('買') || lowerMsg.includes('buy')) {
+            if (!tickerMatch) {
+              return '請告訴我股票代號，例如：「我買了 100 股 TSLA」';
+            }
+            
+            const ticker = tickerMatch[1];
+            const quantity = msg.match(/(\d+)\s*[股張]/)?.[1] || '1';
+            
+            // 查詢股價和分析
+            try {
+              const [priceRes, analysisRes] = await Promise.all([
+                axios.get(`${API_BASE}/quote?ticker=${ticker}`),
+                axios.get(`${API_BASE}/analyze?ticker=${ticker}`)
+              ]);
+              
+              const priceData = priceRes.data;
+              const analysis = analysisRes.data;
+              
+              if (priceData.error) {
+                return `無法取得 ${ticker} 的股價資料`;
+              }
+              
+              // 儲存交易
+              const trade = {
+                date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                ticker: ticker,
+                action: 'BUY',
+                entry_price: priceData.current_price,
+                quantity: parseInt(quantity),
+                total_value: priceData.current_price * parseInt(quantity),
+                current_price: priceData.current_price,
+                score: analysis.score || 3,
+                rating: analysis.rating || '⭐⭐⭐',
+                suggestion: analysis.suggestion || '',
+                stop_loss: analysis.stop_loss,
+                target_1: analysis.target_1,
+                target_2: analysis.target_2,
+                reason: msg,
+                rsi: analysis.rsi,
+                trend: analysis.trend,
+                status: 'HOLDING'
+              };
+              
+              await axios.post(`${API_BASE}/trades`, trade);
+              
+              return `✅ 買入記錄已儲存！
+
+📊 ${ticker} (${priceData.name})
+• 現價: $${priceData.current_price.toFixed(2)}
+• 52週: $${priceData.week52_low} - $${priceData.week52_high}
+
+📈 技術分析：
+• RSI: ${analysis.rsi?.toFixed(1)}
+• 趨勢: ${analysis.trend}
+• MA20: $${analysis.ma20?.toFixed(2)}
+
+💡 建議：
+• 停損: $${analysis.stop_loss}
+• 目標1: $${analysis.target_1}
+• 目標2: $${analysis.target_2}
+
+⭐ 評分: ${analysis.rating} (${analysis.suggestion})`;
+              
+            } catch (e) {
+              return '抱歉，無法連接伺服器。請稍後再試。';
+            }
+          }
+          
+          // 賣出交易
+          if (lowerMsg.includes('賣') || lowerMsg.includes('sell')) {
+            if (!tickerMatch) {
+              return '請告訴我股票代號，例如：「我賣了 50 股 TSLA」';
+            }
+            
+            const ticker = tickerMatch[1];
+            const quantity = msg.match(/(\d+)\s*[股張]/)?.[1] || '1';
+            const price = priceMatch ? parseFloat(priceMatch[1]) : null;
+            
+            // 查詢股價
+            try {
+              const priceRes = await axios.get(`${API_BASE}/quote?ticker=${ticker}`);
+              const priceData = priceRes.data;
+              
+              if (priceData.error) {
+                return `無法取得 ${ticker} 的股價資料`;
+              }
+              
+              const sellPrice = price || priceData.current_price;
+              
+              // 儲存賣出交易
+              const trade = {
+                date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                ticker: ticker,
+                action: 'SELL',
+                entry_price: sellPrice,
+                quantity: parseInt(quantity),
+                total_value: sellPrice * parseInt(quantity),
+                reason: msg,
+                status: 'CLOSED'
+              };
+              
+              await axios.post(`${API_BASE}/trades`, trade);
+              
+              return `✅ 賣出記錄已儲存！
+
+📊 ${ticker}
+• 賣價: $${sellPrice.toFixed(2)}
+• 股數: ${quantity}
+
+📈 此筆交易已平倉`;
+              
+            } catch (e) {
+              return '抱歉，無法連接伺服器。';
+            }
+          }
+          
+          // 單純查詢股價
+          if (tickerMatch && (lowerMsg.includes('股價') || lowerMsg.includes('分析') || lowerMsg.includes('多少'))) {
+            try {
+              const [priceRes, analysisRes] = await Promise.all([
+                axios.get(`${API_BASE}/quote?ticker=${tickerMatch[1]}`),
+                axios.get(`${API_BASE}/analyze?ticker=${tickerMatch[1]}`)
+              ]);
+              
+              const priceData = priceRes.data;
+              const analysis = analysisRes.data;
+              
+              if (priceData.error) {
+                return `無法取得 ${tickerMatch[1]} 的資料`;
+              }
+              
+              return `📊 ${tickerMatch[1]} (${priceData.name})
+
+💰 現價: $${priceData.current_price.toFixed(2)}
+📊 52週: $${priceData.week52_low} - $${priceData.week52_high}
+
+📈 技術分析：
+• RSI: ${analysis.rsi?.toFixed(1)}
+• MA5: $${analysis.ma5?.toFixed(2)}
+• MA20: $${analysis.ma20?.toFixed(2)}
+• 趨勢: ${analysis.trend}
+
+💡 建議: ${analysis.suggestion}
+• 停損: $${analysis.stop_loss}
+• 目標: $${analysis.target_1}
+
+⭐ 評分: ${analysis.rating}`;
+              
+            } catch (e) {
+              return '抱歉，無法取得資料';
+            }
+          }
+          
+          return `📝 我理解你的輸入。
+
+可以說：
+• 「我買了 100 股 TSLA」
+• 「我賣了 50 股 NVDA」
+• 「TSLA 多少錢」
+• 「分析 AAPL」`;
+        };
+        
+        return (
+          <div className="container-fluid py-3">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h4 className="mb-0">📈 NoFOMO</h4>
+              <span className="badge bg-success">API 連線中</span>
+            </div>
+            
+            <ul className="nav nav-tabs mb-3">
+              <li className="nav-item">
+                <button className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
+                  💬 對話
+                </button>
+              </li>
+              <li className="nav-item">
+                <button className={`nav-link ${activeTab === 'trades' ? 'active' : ''}`} onClick={() => setActiveTab('trades')}>
+                  📋 日誌 ({trades.length})
+                </button>
+              </li>
+              <li className="nav-item">
+                <button className={`nav-link ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>
+                  📊 統計
+                </button>
+              </li>
+            </ul>
+            
+            <div className="tab-content">
+              {activeTab === 'chat' && (
+                <ChatTab 
+                  messages={messages} 
+                  input={input} 
+                  setInput={setInput} 
+                  handleSend={handleSend}
+                  loading={loading}
+                  messagesEndRef={messagesEndRef}
+                />
+              )}
+              {activeTab === 'trades' && <TradesTab trades={trades} />}
+              {activeTab === 'stats' && <StatsTab trades={trades} portfolio={portfolio} />}
+            </div>
+          </div>
+        );
+      }
+      
+      function ChatTab({ messages, input, setInput, handleSend, loading, messagesEndRef }) {
+        return (
+          <div>
+            <div className="chat-container bg-white rounded p-3 mb-3" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {messages.map(msg => (
+                <div key={msg.id} className={`mb-3 ${msg.role === 'user' ? 'text-end' : ''}`}>
+                  <div className={`d-inline-block p-2 rounded ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-light'}`} style={{ maxWidth: '85%', whiteSpace: 'pre-wrap', textAlign: 'left' }}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {loading && (
+                <div className="text-muted">
+                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  分析中...
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            
+            <div className="input-group">
+              <input 
+                type="text" 
+                className="form-control" 
+                placeholder="輸入你的交易，例如：我買了 100 股 TSLA"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              />
+              <button className="btn btn-primary" onClick={handleSend} disabled={loading}>
+                {loading ? <span className="spinner-border spinner-border-sm"></span> : '發送'}
+              </button>
+            </div>
+          </div>
+        );
+      }
+      
+      function TradesTab({ trades }) {
+        if (!trades || trades.length === 0) {
+          return (
+            <div className="text-center text-muted py-5">
+              <i className="bi bi-journal-text" style={{ fontSize: '3rem' }}></i>
+              <p className="mt-3">尚無交易記錄</p>
+              <p>到「對話」頁面告訴我你的第一筆交易！</p>
+            </div>
+          );
+        }
+        
+        return (
+          <div>
+            {trades.slice(0, 20).map((trade, idx) => (
+              <div key={idx} className={`trade-card ${trade.action?.toLowerCase()}`}>
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 className="mb-1">
+                      {trade.action === 'BUY' ? '🟢 買入' : '🔴 賣出'} {trade.ticker}
+                    </h6>
+                    <small className="text-muted">{trade.date}</small>
+                  </div>
+                  <div className="text-end">
+                    <div className="fw-bold">${trade.entry_price?.toFixed(2)}</div>
+                    <small className="text-muted">{trade.quantity} 股</small>
+                  </div>
+                </div>
+                
+                {trade.rating && (
+                  <div className="mt-2">
+                    <span className="rating-star">{trade.rating}</span>
+                    {trade.suggestion && <span className="ms-2 text-muted">{trade.suggestion}</span>}
+                  </div>
+                )}
+                
+                {trade.rsi && (
+                  <div className="mt-2 small">
+                    RSI: {trade.rsi.toFixed(1)} | 趨勢: {trade.trend}
+                  </div>
+                )}
+                
+                {(trade.stop_loss || trade.target_1) && (
+                  <div className="mt-2 d-flex gap-2">
+                    {trade.stop_loss && <span className="badge bg-warning">🛡️ 停損 ${trade.stop_loss}</span>}
+                    {trade.target_1 && <span className="badge bg-success">🎯 目標 ${trade.target_1}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      }
+      
+      function StatsTab({ trades, portfolio }) {
+        const buyCount = trades?.filter(t => t.action === 'BUY').length || 0;
+        const sellCount = trades?.filter(t => t.action === 'SELL').length || 0;
+        
+        const scoreCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        trades?.forEach(t => {
+          const score = t.score || 3;
+          if (score >= 4) scoreCounts[5]++;
+          else if (score >= 3) scoreCounts[4]++;
+          else if (score >= 2) scoreCounts[3]++;
+          else scoreCounts[2]++;
+        });
+        
+        const totalTrades = trades?.length || 0;
+        
+        return (
+          <div>
+            <div className="row g-3 mb-4">
+              <div className="col-6">
+                <div className="card text-center">
+                  <div className="card-body">
+                    <h3 className="mb-0">{totalTrades}</h3>
+                    <small className="text-muted">總交易次數</small>
+                  </div>
+                </div>
+              </div>
+              <div className="col-6">
+                <div className="card text-center">
+                  <div className="card-body">
+                    <h3 className="mb-0">{buyCount}</h3>
+                    <small className="text-muted">買入次數</small>
+                  </div>
+                </div>
+              </div>
+              <div className="col-6">
+                <div className="card text-center">
+                  <div className="card-body">
+                    <h3 className="mb-0">{sellCount}</h3>
+                    <small className="text-muted">賣出次數</small>
+                  </div>
+                </div>
+              </div>
+              <div className="col-6">
+                <div className="card text-center">
+                  <div className="card-body">
+                    <h3 className="mb-0">{portfolio?.positions?.length || 0}</h3>
+                    <small className="text-muted">目前持股</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="card">
+              <div className="card-header">
+                <h6 className="mb-0">⭐ 進場品質分布</h6>
+              </div>
+              <div className="card-body">
+                {[5,4,3,2,1].map(score => (
+                  <div key={score} className="d-flex align-items-center mb-2">
+                    <span className="me-2" style={{ width: '60px' }}>{'⭐'.repeat(score)}</span>
+                    <div className="flex-grow-1">
+                      <div className="progress" style={{ height: '8px' }}>
+                        <div className="progress-bar" style={{ width: `${totalTrades ? (scoreCounts[score] / totalTrades * 100) : 0}%` }}></div>
+                      </div>
+                    </div>
+                    <span className="ms-2 text-muted" style={{ width: '30px' }}>{scoreCounts[score]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+      
+      ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+  </body>
+</html>
