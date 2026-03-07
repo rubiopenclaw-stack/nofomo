@@ -302,6 +302,129 @@ def update_watchlist():
     return jsonify({'error': 'Invalid request'})
 
 
+@app.route('/api/history')
+def get_history():
+    """Get historical price data"""
+    ticker = request.args.get('ticker', '').upper()
+    period = request.args.get('period', '1mo')  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+    
+    if not ticker:
+        return jsonify({'error': 'Missing ticker'})
+    
+    valid_periods = ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max']
+    if period not in valid_periods:
+        return jsonify({'error': f'Invalid period. Valid: {valid_periods}'})
+    
+    try:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period=period)
+        
+        if hist.empty:
+            return jsonify({'error': 'No data'})
+        
+        # Convert to list of dicts
+        data = []
+        for idx, row in hist.iterrows():
+            data.append({
+                'date': idx.isoformat(),
+                'open': float(row['Open']),
+                'high': float(row['High']),
+                'low': float(row['Low']),
+                'close': float(row['Close']),
+                'volume': int(row['Volume'])
+            })
+        
+        logger.info(f'History: {ticker} {period} {len(data)} days')
+        return jsonify({
+            'ticker': ticker,
+            'period': period,
+            'data': data,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f'History error: {ticker} {e}')
+        return jsonify({'error': str(e)})
+
+
+@app.route('/api/portfolio/performance')
+def portfolio_performance():
+    """Calculate portfolio performance"""
+    # Get trades
+    trades = []
+    for f in TRADES_DIR.glob('*.json'):
+        with open(f, 'r', encoding='utf-8') as fp:
+            trades.append(json.load(fp))
+    
+    if not trades:
+        return jsonify({'total_value': 0, 'total_cost': 0, 'pnl': 0, 'pnl_percent': 0})
+    
+    # Aggregate positions
+    positions = {}
+    total_cost = 0
+    
+    for trade in trades:
+        ticker = trade.get('ticker', '').upper()
+        action = trade.get('action', '').lower()
+        quantity = int(trade.get('quantity', 0))
+        price = float(trade.get('price', 0))
+        
+        if ticker not in positions:
+            positions[ticker] = {'quantity': 0, 'avg_price': 0, 'cost': 0}
+        
+        if action == 'buy':
+            old_qty = positions[ticker]['quantity']
+            old_cost = positions[ticker]['cost']
+            new_cost = old_cost + (quantity * price)
+            new_qty = old_qty + quantity
+            positions[ticker]['quantity'] = new_qty
+            positions[ticker]['avg_price'] = new_cost / new_qty if new_qty > 0 else 0
+            positions[ticker]['cost'] = new_cost
+            total_cost += quantity * price
+        elif action == 'sell':
+            positions[ticker]['quantity'] -= quantity
+            positions[ticker]['cost'] -= quantity * positions[ticker]['avg_price']
+            total_cost -= quantity * price
+    
+    # Get current prices and calculate P&L
+    total_value = 0
+    position_details = []
+    
+    for ticker, pos in positions.items():
+        if pos['quantity'] > 0:
+            current_price = get_stock_price(ticker)
+            if 'error' not in current_price:
+                current_value = pos['quantity'] * current_price['current_price']
+                cost_basis = pos['quantity'] * pos['avg_price']
+                pnl = current_value - cost_basis
+                pnl_percent = (pnl / cost_basis * 100) if cost_basis > 0 else 0
+                
+                position_details.append({
+                    'ticker': ticker,
+                    'quantity': pos['quantity'],
+                    'avg_price': round(pos['avg_price'], 2),
+                    'current_price': current_price['current_price'],
+                    'value': round(current_value, 2),
+                    'cost': round(cost_basis, 2),
+                    'pnl': round(pnl, 2),
+                    'pnl_percent': round(pnl_percent, 2)
+                })
+                total_value += current_value
+    
+    total_pnl = total_value - total_cost
+    total_pnl_percent = (total_pnl / total_cost * 100) if total_cost > 0 else 0
+    
+    logger.info(f'Portfolio perf: value={total_value} cost={total_cost} pnl={total_pnl}')
+    
+    return jsonify({
+        'positions': position_details,
+        'total_value': round(total_value, 2),
+        'total_cost': round(total_cost, 2),
+        'pnl': round(total_pnl, 2),
+        'pnl_percent': round(total_pnl_percent, 2),
+        'timestamp': datetime.now().isoformat()
+    })
+
+
 # Serve UI
 @app.route('/')
 def index():

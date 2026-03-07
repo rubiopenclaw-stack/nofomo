@@ -67,3 +67,21 @@
 2026-03-08 02:03:17,763 - INFO - Analyze request: NVDA
 2026-03-08 02:03:17,894 - INFO - Analyze success: NVDA score=3
 2026-03-08 02:03:17,895 - INFO - 127.0.0.1 - - [08/Mar/2026 02:03:17] "GET /api/analyze?ticker=NVDA HTTP/1.1" 200 -
+2026-03-08 03:01:49,114 - INFO - 127.0.0.1 - - [08/Mar/2026 03:01:49] "GET /api/health HTTP/1.1" 200 -
+2026-03-08 03:03:01,727 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
+2026-03-08 03:03:02,063 - INFO -  * Restarting with stat
+2026-03-08 03:03:03,780 - WARNING -  * Debugger is active!
+2026-03-08 03:03:03,806 - INFO -  * Debugger PIN: 129-705-764
+2026-03-08 03:03:07,841 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.33.17:5000
+2026-03-08 03:03:07,841 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-08 03:03:07,843 - INFO -  * Restarting with stat
+2026-03-08 03:03:09,239 - WARNING -  * Debugger is active!
+2026-03-08 03:03:09,265 - INFO -  * Debugger PIN: 129-705-764
+2026-03-08 03:03:25,983 - INFO - 127.0.0.1 - - [08/Mar/2026 03:03:25] "GET /api/health HTTP/1.1" 200 -
+2026-03-08 03:03:30,302 - INFO - History: NVDA 5d 5 days
+2026-03-08 03:03:30,303 - INFO - 127.0.0.1 - - [08/Mar/2026 03:03:30] "GET /api/history?ticker=NVDA&period=5d HTTP/1.1" 200 -
+2026-03-08 03:03:34,005 - INFO - Portfolio perf: value=6284.500160217285 cost=0.0 pnl=6284.500160217285
+2026-03-08 03:03:34,006 - INFO - 127.0.0.1 - - [08/Mar/2026 03:03:34] "GET /api/portfolio/performance HTTP/1.1" 200 -
