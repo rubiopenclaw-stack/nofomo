@@ -36,6 +36,7 @@ TRADES_DIR.mkdir(parents=True, exist_ok=True)
 # Simple in-memory cache
 _price_cache = {}
 _cache_ttl = 60  # 60 seconds TTL for prices
+_watchlist = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'JPM', 'V', 'WMT']  # Default watchlist
 
 
 def _get_cached(ticker, cache_type='price'):
@@ -122,6 +123,13 @@ def technical_analysis(ticker):
         macd = ema12 - ema26
         signal = macd.ewm(span=9).mean()
         
+        # Bollinger Bands
+        bb_period = 20
+        bb_sma = df['Close'].rolling(bb_period).mean()
+        bb_std = df['Close'].rolling(bb_period).std()
+        bb_upper = bb_sma + (bb_std * 2)
+        bb_lower = bb_sma - (bb_std * 2)
+        
         # 趨勢
         trend = 'BULLISH' if ma5 > ma20 else 'BEARISH' if ma5 < ma20 else 'NEUTRAL'
         
@@ -141,6 +149,12 @@ def technical_analysis(ticker):
             'rsi': rsi,
             'macd': float(macd.iloc[-1]),
             'macd_signal': float(signal.iloc[-1]),
+            'bollinger': {
+                'upper': float(bb_upper.iloc[-1]),
+                'middle': float(bb_sma.iloc[-1]),
+                'lower': float(bb_lower.iloc[-1]),
+                'position': 'UPPER' if current_price > bb_upper.iloc[-1] else 'LOWER' if current_price < bb_lower.iloc[-1] else 'MIDDLE'
+            },
             'trend': trend,
             'score': score,
             'rating': '⭐' * score,
@@ -164,7 +178,8 @@ def health():
         'status': 'ok',
         'timestamp': datetime.now().isoformat(),
         'cache_size': len(_price_cache),
-        'cache_ttl': {'price': _cache_ttl, 'analysis': 300}
+        'cache_ttl': {'price': _cache_ttl, 'analysis': 300},
+        'watchlist_count': len(_watchlist)
     })
 
 
@@ -247,6 +262,44 @@ def get_portfolio():
         with open(PORTFOLIO_FILE, 'r', encoding='utf-8') as fp:
             return jsonify(json.load(fp))
     return jsonify({'positions': [], 'cash': 0})
+
+
+@app.route('/api/batch-quote')
+def batch_quote():
+    """Batch quote for multiple tickers"""
+    tickers = request.args.get('tickers', '').upper().split(',')
+    tickers = [t.strip() for t in tickers if t.strip()]
+    
+    if not tickers:
+        return jsonify({'error': 'Missing tickers'})
+    
+    if len(tickers) > 20:
+        return jsonify({'error': 'Max 20 tickers allowed'})
+    
+    results = {}
+    for ticker in tickers:
+        results[ticker] = get_stock_price(ticker)
+    
+    logger.info(f'Batch quote: {len(tickers)} tickers')
+    return jsonify(results)
+
+
+@app.route('/api/watchlist')
+def get_watchlist():
+    """Get watchlist"""
+    return jsonify({'watchlist': _watchlist})
+
+
+@app.route('/api/watchlist', methods=['POST'])
+def update_watchlist():
+    """Update watchlist"""
+    global _watchlist
+    data = request.json
+    if 'watchlist' in data:
+        _watchlist = [t.upper().strip() for t in data['watchlist'] if t.strip()]
+        logger.info(f'Watchlist updated: {_watchlist}')
+        return jsonify({'success': True, 'watchlist': _watchlist})
+    return jsonify({'error': 'Invalid request'})
 
 
 # Serve UI

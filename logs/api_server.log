@@ -1,19 +1,5 @@
-2026-03-08 00:03:23,236 - WARNING -  * Debugger is active!
-2026-03-08 00:03:23,274 - INFO -  * Debugger PIN: 140-217-909
-2026-03-08 00:03:25,136 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
-2026-03-08 00:03:26,620 - WARNING -  * Debugger is active!
-2026-03-08 00:03:26,655 - INFO -  * Debugger PIN: 140-217-909
-2026-03-08 00:03:32,677 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
-2026-03-08 00:03:34,412 - WARNING -  * Debugger is active!
-2026-03-08 00:03:34,455 - INFO -  * Debugger PIN: 140-217-909
-2026-03-08 00:03:38,906 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
-2026-03-08 00:03:40,677 - WARNING -  * Debugger is active!
-2026-03-08 00:03:40,709 - INFO -  * Debugger PIN: 140-217-909
-2026-03-08 00:03:40,962 - INFO - Analyze request: NVDA
-2026-03-08 00:03:41,496 - INFO - Analyze success: NVDA score=3
-2026-03-08 00:03:41,497 - INFO - 127.0.0.1 - - [08/Mar/2026 00:03:41] "GET /api/analyze?ticker=NVDA HTTP/1.1" 200 -
-2026-03-08 00:03:51,343 - INFO - Quote request: MSFT
-2026-03-08 00:03:51,783 - INFO - 127.0.0.1 - - [08/Mar/2026 00:03:51] "GET /api/quote?ticker=MSFT HTTP/1.1" 200 -
+ * Serving Flask app 'api'
+ * Debug mode: on
 2026-03-08 01:03:09,012 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on all addresses (0.0.0.0)
  * Running on http://127.0.0.1:5000
@@ -52,18 +38,5 @@
 2026-03-08 02:03:00,388 - INFO -  * Restarting with stat
 2026-03-08 02:03:01,493 - WARNING -  * Debugger is active!
 2026-03-08 02:03:01,512 - INFO -  * Debugger PIN: 129-705-764
-2026-03-08 02:03:05,118 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
- * Running on all addresses (0.0.0.0)
- * Running on http://127.0.0.1:5000
- * Running on http://192.168.33.17:5000
-2026-03-08 02:03:05,119 - INFO - [33mPress CTRL+C to quit[0m
-2026-03-08 02:03:05,121 - INFO -  * Restarting with stat
-2026-03-08 02:03:06,178 - WARNING -  * Debugger is active!
-2026-03-08 02:03:06,204 - INFO -  * Debugger PIN: 129-705-764
-2026-03-08 02:03:08,825 - INFO - 127.0.0.1 - - [08/Mar/2026 02:03:08] "GET /api/health HTTP/1.1" 200 -
-2026-03-08 02:03:12,996 - INFO - Batch quote: 3 tickers
-2026-03-08 02:03:12,998 - INFO - 127.0.0.1 - - [08/Mar/2026 02:03:12] "GET /api/batch-quote?tickers=AAPL,MSFT,NVDA HTTP/1.1" 200 -
-2026-03-08 02:03:15,514 - INFO - 127.0.0.1 - - [08/Mar/2026 02:03:15] "GET /api/watchlist HTTP/1.1" 200 -
-2026-03-08 02:03:17,763 - INFO - Analyze request: NVDA
-2026-03-08 02:03:17,894 - INFO - Analyze success: NVDA score=3
-2026-03-08 02:03:17,895 - INFO - 127.0.0.1 - - [08/Mar/2026 02:03:17] "GET /api/analyze?ticker=NVDA HTTP/1.1" 200 -
+/usr/local/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/resource_tracker.py:396: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-x1kf05ld'}
+  warnings.warn(
