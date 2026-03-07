@@ -1,0 +1,21 @@
+{
+  "date": "2026-03-07 12:38",
+  "ticker": "ONDS",
+  "action": "BUY",
+  "entry_price": 9.829999923706055,
+  "quantity": 100,
+  "total_value": 982.9999923706055,
+  "current_price": 9.829999923706055,
+  "score": 5,
+  "rating": "⭐⭐⭐⭐⭐",
+  "suggestion": "強烈買入",
+  "stop_loss": 9.34,
+  "target_1": 10.81,
+  "target_2": 11.8,
+  "reason": "買入ONDS 100股",
+  "rsi": 53.801166410750085,
+  "trend": "BULLISH",
+  "status": "HOLDING",
+  "id": "20260307_203843",
+  "created_at": "2026-03-07T20:38:43.235973"
+}
