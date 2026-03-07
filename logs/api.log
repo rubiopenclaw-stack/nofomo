@@ -1,0 +1,29 @@
+ * Serving Flask app 'api'
+ * Debug mode: on
+2026-03-08 04:02:46,629 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.33.17:5000
+2026-03-08 04:02:46,630 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-08 04:02:46,633 - INFO -  * Restarting with stat
+2026-03-08 04:02:47,799 - WARNING -  * Debugger is active!
+2026-03-08 04:02:47,867 - INFO -  * Debugger PIN: 129-705-764
+2026-03-08 04:02:48,022 - INFO - 127.0.0.1 - - [08/Mar/2026 04:02:48] "GET /api/health HTTP/1.1" 200 -
+2026-03-08 04:03:23,375 - INFO - Portfolio perf: value=6284.500160217285 cost=0.0 pnl=6284.500160217285
+2026-03-08 04:03:23,377 - INFO - Risk assessment: level=HIGH score=7
+2026-03-08 04:03:23,377 - INFO - 127.0.0.1 - - [08/Mar/2026 04:03:23] "GET /api/risk评估 HTTP/1.1" 200 -
+2026-03-08 04:03:26,642 - INFO - Alert set: NVDA above 150.0
+2026-03-08 04:03:26,642 - INFO - 127.0.0.1 - - [08/Mar/2026 04:03:26] "POST /api/alerts HTTP/1.1" 200 -
+2026-03-08 04:03:29,607 - INFO - Alerts checked: 1 triggered
+2026-03-08 04:03:29,608 - INFO - 127.0.0.1 - - [08/Mar/2026 04:03:29] "GET /api/alerts/check HTTP/1.1" 200 -
+2026-03-08 04:03:57,408 - ERROR - Signal error: AAPL 'suggestion'
+2026-03-08 04:03:57,519 - ERROR - Signal error: MSFT 'suggestion'
+2026-03-08 04:03:57,607 - ERROR - Signal error: GOOGL 'suggestion'
+2026-03-08 04:03:57,691 - ERROR - Signal error: AMZN 'suggestion'
+2026-03-08 04:03:57,789 - ERROR - Signal error: NVDA 'suggestion'
+2026-03-08 04:03:57,789 - INFO - Signals generated: 0
+2026-03-08 04:03:57,790 - INFO - 127.0.0.1 - - [08/Mar/2026 04:03:57] "GET /api/signals HTTP/1.1" 200 -
+2026-03-08 04:04:00,526 - INFO - Trades analysis: 4 trades
+2026-03-08 04:04:00,526 - INFO - 127.0.0.1 - - [08/Mar/2026 04:04:00] "GET /api/trades/analysis HTTP/1.1" 200 -
+/usr/local/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/resource_tracker.py:396: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-zg9mmfsz'}
+  warnings.warn(
