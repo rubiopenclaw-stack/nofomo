@@ -85,3 +85,24 @@
 2026-03-08 03:03:30,303 - INFO - 127.0.0.1 - - [08/Mar/2026 03:03:30] "GET /api/history?ticker=NVDA&period=5d HTTP/1.1" 200 -
 2026-03-08 03:03:34,005 - INFO - Portfolio perf: value=6284.500160217285 cost=0.0 pnl=6284.500160217285
 2026-03-08 03:03:34,006 - INFO - 127.0.0.1 - - [08/Mar/2026 03:03:34] "GET /api/portfolio/performance HTTP/1.1" 200 -
+2026-03-08 03:04:26,029 - INFO - 127.0.0.1 - - [08/Mar/2026 03:04:26] "GET /api/health HTTP/1.1" 200 -
+2026-03-08 03:04:55,607 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
+2026-03-08 03:04:55,891 - INFO -  * Restarting with stat
+2026-03-08 03:04:57,207 - WARNING -  * Debugger is active!
+2026-03-08 03:04:57,228 - INFO -  * Debugger PIN: 129-705-764
+2026-03-08 03:05:00,349 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.33.17:5000
+2026-03-08 03:05:00,350 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-08 03:05:00,351 - INFO -  * Restarting with stat
+2026-03-08 03:05:01,410 - WARNING -  * Debugger is active!
+2026-03-08 03:05:01,432 - INFO -  * Debugger PIN: 129-705-764
+2026-03-08 03:05:36,548 - INFO - 127.0.0.1 - - [08/Mar/2026 03:05:36] "GET /api/health HTTP/1.1" 200 -
+2026-03-08 03:05:40,894 - INFO - Portfolio perf: value=6284.500160217285 cost=0.0 pnl=6284.500160217285
+2026-03-08 03:05:40,895 - INFO - Risk assessment: level=HIGH score=7
+2026-03-08 03:05:40,895 - INFO - 127.0.0.1 - - [08/Mar/2026 03:05:40] "GET /api/risk评估 HTTP/1.1" 200 -
+2026-03-08 03:05:44,228 - INFO - Alert set: NVDA above 200.0
+2026-03-08 03:05:44,228 - INFO - 127.0.0.1 - - [08/Mar/2026 03:05:44] "POST /api/alerts HTTP/1.1" 200 -
+2026-03-08 03:05:47,253 - INFO - Alerts checked: 0 triggered
+2026-03-08 03:05:47,253 - INFO - 127.0.0.1 - - [08/Mar/2026 03:05:47] "GET /api/alerts/check HTTP/1.1" 200 -

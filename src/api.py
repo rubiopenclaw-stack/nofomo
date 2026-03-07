@@ -425,6 +425,143 @@ def portfolio_performance():
     })
 
 
+# Price alert storage (in-memory)
+_price_alerts = {}
+
+
+@app.route('/api/alerts', methods=['GET'])
+def get_alerts():
+    """Get all price alerts"""
+    return jsonify({'alerts': _price_alerts})
+
+
+@app.route('/api/alerts', methods=['POST'])
+def set_alert():
+    """Set a price alert"""
+    data = request.json
+    ticker = data.get('ticker', '').upper()
+    target_price = float(data.get('target_price', 0))
+    condition = data.get('condition', 'above')  # above, below
+    
+    if not ticker or target_price <= 0:
+        return jsonify({'error': 'Invalid ticker or price'})
+    
+    if ticker not in _price_alerts:
+        _price_alerts[ticker] = []
+    
+    alert = {
+        'target_price': target_price,
+        'condition': condition,
+        'created_at': datetime.now().isoformat(),
+        'triggered': False
+    }
+    _price_alerts[ticker].append(alert)
+    
+    logger.info(f'Alert set: {ticker} {condition} {target_price}')
+    return jsonify({'success': True, 'alert': alert})
+
+
+@app.route('/api/alerts', methods=['DELETE'])
+def clear_alerts():
+    """Clear all alerts"""
+    global _price_alerts
+    _price_alerts = {}
+    logger.info('All alerts cleared')
+    return jsonify({'success': True})
+
+
+@app.route('/api/alerts/check')
+def check_alerts():
+    """Check if any alerts are triggered"""
+    triggered = []
+    
+    for ticker, alerts in _price_alerts.items():
+        current = get_stock_price(ticker)
+        if 'error' in current:
+            continue
+        
+        price = current['current_price']
+        for alert in alerts:
+            if alert['triggered']:
+                continue
+            
+            is_triggered = False
+            if alert['condition'] == 'above' and price >= alert['target_price']:
+                is_triggered = True
+            elif alert['condition'] == 'below' and price <= alert['target_price']:
+                is_triggered = True
+            
+            if is_triggered:
+                alert['triggered'] = True
+                alert['triggered_at'] = datetime.now().isoformat()
+                alert['current_price'] = price
+                triggered.append({
+                    'ticker': ticker,
+                    'target_price': alert['target_price'],
+                    'condition': alert['condition'],
+                    'current_price': price
+                })
+    
+    logger.info(f'Alerts checked: {len(triggered)} triggered')
+    return jsonify({
+        'triggered': triggered,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@app.route('/api/risk评估')
+def risk_assessment():
+    """Calculate portfolio risk metrics"""
+    # Get portfolio performance data
+    perf_response = portfolio_performance()
+    perf_data = perf_response.get_json()
+    
+    if not perf_data.get('positions'):
+        return jsonify({'risk_level': 'N/A', 'message': 'No positions'})
+    
+    # Calculate risk metrics
+    positions = perf_data['positions']
+    total_value = perf_data['total_value']
+    
+    # Position concentration
+    max_position = max([p['value'] / total_value for p in positions]) if total_value > 0 else 0
+    concentration_risk = 'HIGH' if max_position > 0.4 else 'MEDIUM' if max_position > 0.25 else 'LOW'
+    
+    # P&L distribution
+    profitable = sum(1 for p in positions if p['pnl'] > 0)
+    losing = sum(1 for p in positions if p['pnl'] < 0)
+    win_rate = profitable / len(positions) * 100 if positions else 0
+    
+    # Overall risk score (1-10, higher = riskier)
+    risk_score = 5
+    if concentration_risk == 'HIGH': risk_score += 2
+    elif concentration_risk == 'MEDIUM': risk_score += 1
+    if win_rate < 40: risk_score += 2
+    elif win_rate < 60: risk_score += 1
+    
+    risk_level = 'HIGH' if risk_score >= 7 else 'MEDIUM' if risk_score >= 4 else 'LOW'
+    
+    recommendations = []
+    if concentration_risk == 'HIGH':
+        recommendations.append('建議分散投資，降低單一標的比重')
+    if win_rate < 50:
+        recommendations.append('建議檢視虧損部位，考慮停損')
+    if len(positions) < 3:
+        recommendations.append('建議增加投資標的數量分散風險')
+    
+    logger.info(f'Risk assessment: level={risk_level} score={risk_score}')
+    
+    return jsonify({
+        'risk_level': risk_level,
+        'risk_score': risk_score,
+        'concentration': concentration_risk,
+        'win_rate': round(win_rate, 1),
+        'positions_count': len(positions),
+        'recommendations': recommendations,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
 # Serve UI
 @app.route('/')
 def index():
