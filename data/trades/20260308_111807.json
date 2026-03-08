@@ -1,0 +1,21 @@
+{
+  "date": "2026-03-08 03:18",
+  "ticker": "TSM",
+  "action": "BUY",
+  "entry_price": 338.8900146484375,
+  "quantity": 3,
+  "total_value": 1016.6700439453125,
+  "current_price": 338.8900146484375,
+  "score": 3,
+  "rating": "⭐⭐⭐",
+  "suggestion": "觀察等待",
+  "stop_loss": 321.95,
+  "target_1": 372.78,
+  "target_2": 406.67,
+  "reason": "我買了3股 TSM",
+  "rsi": 35.03324445532233,
+  "trend": "BEARISH",
+  "status": "HOLDING",
+  "id": "20260308_111807",
+  "created_at": "2026-03-08T11:18:07.191061"
+}

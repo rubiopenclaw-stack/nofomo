@@ -181,7 +181,7 @@ def health():
         'status': 'ok',
         'timestamp': datetime.now().isoformat(),
         'cache_size': len(_price_cache),
-        'cache_ttl': {'price': _cache_ttl, 'analysis': 300},
+        'cache_ttl': {'price': _cache_ttl_price, 'analysis': _cache_ttl_analysis},
         'watchlist_count': len(_watchlist)
     })
 

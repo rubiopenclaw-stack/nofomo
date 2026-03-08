@@ -177,3 +177,29 @@
 2026-03-08 11:04:37,064 - INFO -  * Restarting with stat
 2026-03-08 11:04:38,184 - WARNING -  * Debugger is active!
 2026-03-08 11:04:38,206 - INFO -  * Debugger PIN: 129-705-764
+2026-03-08 11:11:25,099 - INFO - 127.0.0.1 - - [08/Mar/2026 11:11:25] "[35m[1mGET /api/health HTTP/1.1[0m" 500 -
+2026-03-08 11:11:51,333 - INFO - 127.0.0.1 - - [08/Mar/2026 11:11:51] "[35m[1mGET /api/health HTTP/1.1[0m" 500 -
+2026-03-08 11:12:15,219 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
+2026-03-08 11:12:15,503 - INFO -  * Restarting with stat
+2026-03-08 11:12:16,512 - WARNING -  * Debugger is active!
+2026-03-08 11:12:16,531 - INFO -  * Debugger PIN: 129-705-764
+2026-03-08 11:12:28,661 - INFO - 127.0.0.1 - - [08/Mar/2026 11:12:28] "GET /api/health HTTP/1.1" 200 -
+2026-03-08 11:14:14,504 - INFO - 127.0.0.1 - - [08/Mar/2026 11:14:14] "GET / HTTP/1.1" 200 -
+2026-03-08 11:17:40,055 - INFO - 127.0.0.1 - - [08/Mar/2026 11:17:40] "GET / HTTP/1.1" 200 -
+2026-03-08 11:17:41,595 - INFO - Get trades: 5 records
+2026-03-08 11:17:41,596 - INFO - 127.0.0.1 - - [08/Mar/2026 11:17:41] "GET /api/trades HTTP/1.1" 200 -
+2026-03-08 11:17:41,657 - INFO - 127.0.0.1 - - [08/Mar/2026 11:17:41] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-03-08 11:17:42,038 - INFO - 127.0.0.1 - - [08/Mar/2026 11:17:42] "GET /api/portfolio HTTP/1.1" 200 -
+2026-03-08 11:18:06,012 - INFO - Analyze request: TSM
+2026-03-08 11:18:06,022 - INFO - Quote request: TSM
+2026-03-08 11:18:06,578 - INFO - Analyze success: TSM score=3
+2026-03-08 11:18:06,579 - INFO - 127.0.0.1 - - [08/Mar/2026 11:18:06] "GET /api/analyze?ticker=TSM HTTP/1.1" 200 -
+2026-03-08 11:18:06,780 - INFO - 127.0.0.1 - - [08/Mar/2026 11:18:06] "GET /api/quote?ticker=TSM HTTP/1.1" 200 -
+2026-03-08 11:18:07,191 - INFO - New trade added: TSM BUY 3
+2026-03-08 11:18:07,192 - INFO - 127.0.0.1 - - [08/Mar/2026 11:18:07] "POST /api/trades HTTP/1.1" 200 -
+2026-03-08 11:18:07,257 - INFO - Get trades: 6 records
+2026-03-08 11:18:07,257 - INFO - 127.0.0.1 - - [08/Mar/2026 11:18:07] "GET /api/trades HTTP/1.1" 200 -
+2026-03-08 11:18:07,314 - INFO - 127.0.0.1 - - [08/Mar/2026 11:18:07] "GET /api/portfolio HTTP/1.1" 200 -
+2026-03-08 11:18:20,753 - INFO - Get trades: 6 records
+2026-03-08 11:18:20,753 - INFO - 127.0.0.1 - - [08/Mar/2026 11:18:20] "GET /api/trades HTTP/1.1" 200 -
+2026-03-08 11:18:20,838 - INFO - 127.0.0.1 - - [08/Mar/2026 11:18:20] "GET /api/portfolio HTTP/1.1" 200 -
