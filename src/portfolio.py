@@ -42,7 +42,7 @@ def save_portfolio(portfolio: Dict):
 
 def add_trade(trade: Dict) -> str:
     """新增交易記錄"""
-    trade_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+    trade_id = datetime.now().strftime('%Y%m%d_%H%M%S_%f')  # 含微秒，避免同秒衝突
     trade['id'] = trade_id
     trade['created_at'] = datetime.now().isoformat()
     
@@ -97,23 +97,46 @@ def update_portfolio(trade: Dict):
 
 
 def calculate_pnl() -> Dict:
-    """計算損益"""
+    """計算已實現損益（依平均成本法計算賣出損益）"""
     trades = get_trades()
-    portfolio = get_portfolio()
-    
-    realized_pnl = 0
-    for trade in trades:
-        if trade.get('action') == 'SELL' and trade.get('exit_price'):
-            pnl = (float(trade.get('exit_price', 0)) - float(trade.get('entry_price', 0))) * float(trade.get('quantity', 0))
-            realized_pnl += pnl
-    
-    # 計算未實現損益
-    unrealized_pnl = 0
-    
+    # 依時間正序還原部位
+    trades_sorted = sorted(
+        trades,
+        key=lambda x: x.get('date', '') or x.get('created_at', '')
+    )
+
+    positions: Dict[str, Dict] = {}
+    realized_pnl = 0.0
+
+    for trade in trades_sorted:
+        ticker = trade.get('ticker', '').upper()
+        action = trade.get('action', '').upper()
+        quantity = float(trade.get('quantity', 0))
+        price = float(trade.get('entry_price', 0))
+
+        if ticker not in positions:
+            positions[ticker] = {'quantity': 0.0, 'avg_price': 0.0}
+
+        if action == 'BUY':
+            old_qty = positions[ticker]['quantity']
+            old_avg = positions[ticker]['avg_price']
+            new_qty = old_qty + quantity
+            positions[ticker]['avg_price'] = (
+                (old_qty * old_avg + quantity * price) / new_qty
+                if new_qty > 0 else 0.0
+            )
+            positions[ticker]['quantity'] = new_qty
+
+        elif action == 'SELL' and positions[ticker]['quantity'] > 0:
+            cost_basis = positions[ticker]['avg_price']
+            sell_qty = min(quantity, positions[ticker]['quantity'])
+            realized_pnl += (price - cost_basis) * sell_qty
+            positions[ticker]['quantity'] -= sell_qty
+
     return {
-        'realized_pnl': realized_pnl,
-        'unrealized_pnl': unrealized_pnl,
-        'total_pnl': realized_pnl + unrealized_pnl
+        'realized_pnl': round(realized_pnl, 2),
+        'unrealized_pnl': 0,  # 需要即時報價；請使用 /api/portfolio/performance
+        'total_pnl': round(realized_pnl, 2)
     }
 
 

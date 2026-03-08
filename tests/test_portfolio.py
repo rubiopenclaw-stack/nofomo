@@ -158,11 +158,11 @@ class TestAddTrade:
     def test_add_trade_generates_id(self, mock_portfolio_env, sample_trade):
         """交易 ID 格式"""
         from src.portfolio import add_trade
-        
+
         trade_id = add_trade(sample_trade)
-        # Format: YYYYMMDD_HHMMSS
-        assert len(trade_id) == 15
-        assert '_' in trade_id
+        # Format: YYYYMMDD_HHMMSS_ffffff (含微秒，避免同秒衝突)
+        assert len(trade_id) == 22
+        assert trade_id.count('_') == 2
     
     def test_add_trade_has_timestamp(self, mock_portfolio_env, sample_trade, temp_trades_dir):
         """交易包含時間戳"""
@@ -290,23 +290,31 @@ class TestCalculatePnL:
         assert result['total_pnl'] == 0
     
     def test_calculate_realized_pnl(self, mock_portfolio_env, temp_trades_dir):
-        """已實現損益計算"""
-        # Create a completed trade (with exit_price)
-        trade_file = temp_trades_dir / '20240115_100000.json'
-        trade_data = {
+        """已實現損益計算（平均成本法：先買後賣）"""
+        # 先買入，建立成本基礎
+        buy_file = temp_trades_dir / '20240115_090000.json'
+        buy_file.write_text(json.dumps({
+            'ticker': 'AAPL',
+            'action': 'BUY',
+            'quantity': 10,
+            'entry_price': 150.0,
+            'date': '2024-01-15'
+        }))
+
+        # 再以 160 賣出
+        sell_file = temp_trades_dir / '20240115_100000.json'
+        sell_file.write_text(json.dumps({
             'ticker': 'AAPL',
             'action': 'SELL',
             'quantity': 10,
-            'entry_price': 150.0,
-            'exit_price': 160.0,
+            'entry_price': 160.0,
             'date': '2024-01-15'
-        }
-        trade_file.write_text(json.dumps(trade_data))
-        
+        }))
+
         from src.portfolio import calculate_pnl
         result = calculate_pnl()
-        
-        # Profit: (160 - 150) * 10 = 100
+
+        # 已實現損益：(160 - 150) * 10 = 100
         assert result['realized_pnl'] == 100.0
 
 

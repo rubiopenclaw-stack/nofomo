@@ -1,39 +1,60 @@
-from flask import Flask, jsonify, request, send_from_directory
+import sys
+from pathlib import Path
+
+# 確保 src/ 在 import 路徑中（支援直接執行或作為模組）
+sys.path.insert(0, str(Path(__file__).parent))
+
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import yfinance as yf
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
-from pathlib import Path
 import logging
 import time
-from functools import lru_cache
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
-# File lock for JSON operations
-_file_locks = {}
+from analyzer import (
+    get_stock_price as _fetch_price,
+    technical_analysis as _compute_analysis,
+    get_stock_history as _get_stock_history,
+)
+
+# ---------------------------------------------------------------------------
+# 線程安全的 JSON 檔案操作
+# ---------------------------------------------------------------------------
+_file_locks: dict = {}
+_file_locks_lock = threading.Lock()
+
 
 def get_file_lock(filepath):
-    """Get or create a lock for a specific file"""
+    """取得或建立對應檔案的鎖（thread-safe）"""
     filepath = str(filepath)
-    if filepath not in _file_locks:
-        _file_locks[filepath] = threading.Lock()
-    return _file_locks[filepath]
+    with _file_locks_lock:
+        if filepath not in _file_locks:
+            _file_locks[filepath] = threading.Lock()
+        return _file_locks[filepath]
+
 
 def safe_json_write(filepath, data):
-    """Thread-safe JSON write"""
+    """Thread-safe JSON 寫入"""
     lock = get_file_lock(filepath)
     with lock:
         with open(filepath, 'w', encoding='utf-8') as fp:
             json.dump(data, fp, ensure_ascii=False, indent=2)
 
+
 def safe_json_read(filepath):
-    """Thread-safe JSON read"""
+    """Thread-safe JSON 讀取"""
     lock = get_file_lock(filepath)
     with lock:
         with open(filepath, 'r', encoding='utf-8') as fp:
             return json.load(fp)
 
-# Setup logging
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
 LOG_DIR = Path(__file__).parent / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
 logging.basicConfig(
@@ -46,166 +67,216 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Flask app
+# ---------------------------------------------------------------------------
 app = Flask(__name__)
 CORS(app)
 
-# Paths
+# ---------------------------------------------------------------------------
+# 路徑
+# ---------------------------------------------------------------------------
 BASE_DIR = Path(__file__).parent
 UI_DIR = BASE_DIR.parent / 'ui' / 'public'
 DATA_DIR = BASE_DIR.parent / 'data'
 TRADES_DIR = DATA_DIR / 'trades'
 PORTFOLIO_FILE = DATA_DIR / 'portfolio.json'
+WATCHLIST_FILE = DATA_DIR / 'watchlist.json'
+ALERTS_FILE = DATA_DIR / 'alerts.json'
 
 TRADES_DIR.mkdir(parents=True, exist_ok=True)
 
-# Simple in-memory cache
-_price_cache = {}
-_cache_ttl_price = 60  # 60 seconds TTL for stock prices
-_cache_ttl_analysis = 300  # 5 minutes TTL for technical analysis
-_watchlist = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'JPM', 'V', 'WMT']  # Default watchlist
+# ---------------------------------------------------------------------------
+# 內存快取（附鎖）
+# ---------------------------------------------------------------------------
+_price_cache: dict = {}
+_cache_lock = threading.Lock()
+_cache_ttl_price = 60      # 60 秒
+_cache_ttl_analysis = 300  # 5 分鐘
 
 
 def _get_cached(ticker, cache_type='price'):
-    """Get cached data if still valid"""
     key = f"{cache_type}:{ticker.upper()}"
-    if key in _price_cache:
-        data, timestamp = _price_cache[key]
-        # Use different TTL based on cache type
-        ttl = _cache_ttl_analysis if cache_type == 'analysis' else _cache_ttl_price
-        if time.time() - timestamp < ttl:
-            return data
+    with _cache_lock:
+        if key in _price_cache:
+            data, timestamp = _price_cache[key]
+            ttl = _cache_ttl_analysis if cache_type == 'analysis' else _cache_ttl_price
+            if time.time() - timestamp < ttl:
+                return data
     return None
 
 
 def _set_cached(ticker, cache_type, data):
-    """Set cached data"""
     key = f"{cache_type}:{ticker.upper()}"
-    _price_cache[key] = (data, time.time())
+    with _cache_lock:
+        _price_cache[key] = (data, time.time())
+
+
+# ---------------------------------------------------------------------------
+# 關注清單 & 提醒（持久化到 data/）
+# ---------------------------------------------------------------------------
+_DEFAULT_WATCHLIST = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'JPM', 'V', 'WMT']
+
+
+def _load_watchlist():
+    if WATCHLIST_FILE.exists():
+        return safe_json_read(WATCHLIST_FILE)
+    return list(_DEFAULT_WATCHLIST)
+
+
+def _save_watchlist(watchlist):
+    safe_json_write(WATCHLIST_FILE, watchlist)
+
+
+def _load_alerts():
+    if ALERTS_FILE.exists():
+        return safe_json_read(ALERTS_FILE)
+    return {}
+
+
+def _save_alerts(alerts):
+    safe_json_write(ALERTS_FILE, alerts)
+
+
+_watchlist = _load_watchlist()
+_price_alerts = _load_alerts()
+
+# ---------------------------------------------------------------------------
+# 業務邏輯：股價 & 分析（帶快取，委託 analyzer.py 計算）
+# ---------------------------------------------------------------------------
+_SUGGESTION_MAP = {5: '強烈買入', 4: '偏多買入', 3: '觀察等待', 2: '謹慎操作', 1: '不建議'}
 
 
 def get_stock_price(ticker):
-    # Check cache first
+    """取得即時股價（帶快取）"""
     cached = _get_cached(ticker, 'price')
     if cached:
         logger.info(f'Cache hit: {ticker}')
         return cached
-    
-    try:
-        stock = yf.Ticker(ticker)
-        hist = stock.history(period='1d')
-        if hist.empty:
-            return {'error': 'No data'}
-        
-        current_price = float(hist['Close'].iloc[-1])
-        info = stock.info
-        
-        result = {
-            'ticker': ticker.upper(),
-            'current_price': current_price,
-            'currency': info.get('currency', 'USD'),
-            'week52_low': info.get('fiftyTwoWeekLow', 0),
-            'week52_high': info.get('fiftyTwoWeekHigh', 0),
-            'name': info.get('shortName', ticker),
-            'volume': info.get('volume', 0),
-            'timestamp': datetime.now().isoformat()
-        }
-        
-        # Cache the result
+    result = _fetch_price(ticker)
+    if 'error' not in result:
         _set_cached(ticker, 'price', result)
-        return result
-    except Exception as e:
-        return {'error': str(e)}
+    return result
 
 
 def technical_analysis(ticker):
-    # Check cache first (5 min TTL for analysis)
+    """技術分析（帶快取，並展平 MACD dict 以維持 API 相容性）"""
     cached = _get_cached(ticker, 'analysis')
     if cached:
         logger.info(f'Analysis cache hit: {ticker}')
         return cached
-    
-    try:
-        stock = yf.Ticker(ticker)
-        df = stock.history(period='3mo')
-        
-        if df.empty:
-            return {'error': 'No data'}
-        
-        current_price = float(df['Close'].iloc[-1])
-        
-        # MA
-        ma5 = float(df['Close'].rolling(5).mean().iloc[-1])
-        ma20 = float(df['Close'].rolling(20).mean().iloc[-1])
-        ma60 = float(df['Close'].rolling(60).mean().iloc[-1]) if len(df) >= 60 else None
-        
-        # RSI
-        delta = df['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        rs = gain / loss
-        rsi = float(100 - (100 / (1 + rs)).iloc[-1])
-        
-        # MACD
-        ema12 = df['Close'].ewm(span=12).mean()
-        ema26 = df['Close'].ewm(span=26).mean()
-        macd = ema12 - ema26
-        signal = macd.ewm(span=9).mean()
-        
-        # Bollinger Bands
-        bb_period = 20
-        bb_sma = df['Close'].rolling(bb_period).mean()
-        bb_std = df['Close'].rolling(bb_period).std()
-        bb_upper = bb_sma + (bb_std * 2)
-        bb_lower = bb_sma - (bb_std * 2)
-        
-        # 趨勢
-        trend = 'BULLISH' if ma5 > ma20 else 'BEARISH' if ma5 < ma20 else 'NEUTRAL'
-        
-        # 評分
-        score = 3
-        if ma5 > ma20 > ma60: score += 2
-        elif ma5 > ma20: score += 1
-        if rsi < 30: score += 1
-        elif rsi > 70: score -= 1
-        if macd.iloc[-1] > signal.iloc[-1]: score += 1
-        
-        score = max(1, min(5, score))
-        
-        result = {
-            'current_price': current_price,
-            'ma5': ma5, 'ma20': ma20, 'ma60': ma60,
-            'rsi': rsi,
-            'macd': float(macd.iloc[-1]),
-            'macd_signal': float(signal.iloc[-1]),
-            'bollinger': {
-                'upper': float(bb_upper.iloc[-1]),
-                'middle': float(bb_sma.iloc[-1]),
-                'lower': float(bb_lower.iloc[-1]),
-                'position': 'UPPER' if current_price > bb_upper.iloc[-1] else 'LOWER' if current_price < bb_lower.iloc[-1] else 'MIDDLE'
-            },
-            'trend': trend,
-            'score': score,
-            'rating': '⭐' * score,
-            'timestamp': datetime.now().isoformat()
+
+    result = _compute_analysis(ticker)
+    if 'error' not in result:
+        # 將 analyzer.py 回傳的 macd dict 展平，保持原有 API 格式
+        macd_data = result.get('macd', {})
+        if isinstance(macd_data, dict):
+            result['macd'] = macd_data.get('macd')
+            result['macd_signal'] = macd_data.get('signal')
+            result['macd_histogram'] = macd_data.get('histogram')
+            result['macd_crossover'] = macd_data.get('crossover')
+        _set_cached(ticker, 'analysis', result)
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# 共用輔助：交易 & 投資組合
+# ---------------------------------------------------------------------------
+
+def _load_all_trades():
+    """Thread-safe 讀取所有交易檔案"""
+    trades = []
+    for f in TRADES_DIR.glob('*.json'):
+        try:
+            trades.append(safe_json_read(f))
+        except Exception as e:
+            logger.error(f'Failed to read trade file {f}: {e}')
+    return trades
+
+
+def _aggregate_positions(trades):
+    """將交易清單聚合成目前持倉（含平均成本）"""
+    positions: dict = {}
+    for trade in trades:
+        ticker = trade.get('ticker', '').upper()
+        action = trade.get('action', '').lower()
+        quantity = int(trade.get('quantity', 0))
+        price = float(trade.get('entry_price', 0) or trade.get('price', 0))
+
+        if not ticker:
+            continue
+
+        if ticker not in positions:
+            positions[ticker] = {'quantity': 0, 'cost': 0.0, 'avg_price': 0.0}
+
+        if action == 'buy':
+            old_qty = positions[ticker]['quantity']
+            old_cost = positions[ticker]['cost']
+            new_cost = old_cost + quantity * price
+            new_qty = old_qty + quantity
+            positions[ticker]['quantity'] = new_qty
+            positions[ticker]['cost'] = new_cost
+            positions[ticker]['avg_price'] = new_cost / new_qty if new_qty > 0 else 0.0
+
+        elif action == 'sell':
+            avg = positions[ticker]['avg_price']
+            positions[ticker]['quantity'] -= quantity
+            positions[ticker]['cost'] -= quantity * avg
+
+    return {t: p for t, p in positions.items() if p['quantity'] > 0}
+
+
+def _enrich_positions_with_prices(positions):
+    """並行查詢現價，計算每個部位的損益，回傳 (details_list, total_value)"""
+    def fetch_one(ticker, pos):
+        price_data = get_stock_price(ticker)
+        if 'error' in price_data:
+            return None
+        current_price = price_data['current_price']
+        current_value = pos['quantity'] * current_price
+        pnl = current_value - pos['cost']
+        pnl_pct = (pnl / pos['cost'] * 100) if pos['cost'] > 0 else 0.0
+        return {
+            'ticker': ticker,
+            'quantity': pos['quantity'],
+            'avg_price': round(pos['avg_price'], 2),
+            'current_price': round(current_price, 2),
+            'value': round(current_value, 2),
+            'cost': round(pos['cost'], 2),
+            'pnl': round(pnl, 2),
+            'pnl_pct': round(pnl_pct, 2),
         }
-        
-        # Cache the result (5 min TTL)
-        key = f"analysis:{ticker.upper()}"
-        _price_cache[key] = (result, time.time())
-        
-        return result
-    except Exception as e:
-        return {'error': str(e)}
+
+    details = []
+    total_value = 0.0
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {
+            ticker: executor.submit(fetch_one, ticker, pos)
+            for ticker, pos in positions.items()
+        }
+        for ticker, future in futures.items():
+            result = future.result()
+            if result:
+                details.append(result)
+                total_value += result['value']
+
+    return details, total_value
 
 
+# ---------------------------------------------------------------------------
 # API Routes
+# ---------------------------------------------------------------------------
+
 @app.route('/api/health')
 def health():
-    """Health check endpoint"""
+    with _cache_lock:
+        cache_size = len(_price_cache)
     return jsonify({
         'status': 'ok',
         'timestamp': datetime.now().isoformat(),
-        'cache_size': len(_price_cache),
+        'cache_size': cache_size,
         'cache_ttl': {'price': _cache_ttl_price, 'analysis': _cache_ttl_analysis},
         'watchlist_count': len(_watchlist)
     })
@@ -213,9 +284,8 @@ def health():
 
 @app.route('/api/cache/clear', methods=['POST'])
 def clear_cache():
-    """Clear the cache"""
-    global _price_cache
-    _price_cache = {}
+    with _cache_lock:
+        _price_cache.clear()
     logger.info('Cache cleared')
     return jsonify({'success': True, 'message': 'Cache cleared'})
 
@@ -224,12 +294,12 @@ def clear_cache():
 def quote():
     ticker = request.args.get('ticker', '').upper()
     if not ticker:
-        logger.warning('Quote request missing ticker')
-        return jsonify({'error': 'Missing ticker'})
+        return jsonify({'error': 'Missing ticker'}), 400
     logger.info(f'Quote request: {ticker}')
     result = get_stock_price(ticker)
     if 'error' in result:
         logger.error(f'Quote error for {ticker}: {result["error"]}')
+        return jsonify(result), 502
     return jsonify(result)
 
 
@@ -237,33 +307,28 @@ def quote():
 def analyze():
     ticker = request.args.get('ticker', '').upper()
     if not ticker:
-        logger.warning('Analyze request missing ticker')
-        return jsonify({'error': 'Missing ticker'})
-    
+        return jsonify({'error': 'Missing ticker'}), 400
+
     logger.info(f'Analyze request: {ticker}')
     analysis = technical_analysis(ticker)
-    
-    if 'error' not in analysis:
-        price = analysis['current_price']
-        analysis['stop_loss'] = round(price * 0.95, 2)
-        analysis['target_1'] = round(price * 1.10, 2)
-        analysis['target_2'] = round(price * 1.20, 2)
-        
-        scores = {5: '強烈買入', 4: '偏多買入', 3: '觀察等待', 2: '謹慎操作', 1: '不建議'}
-        analysis['suggestion'] = scores.get(analysis['score'], '觀察等待')
-        logger.info(f'Analyze success: {ticker} score={analysis["score"]}')
-    else:
+
+    if 'error' in analysis:
         logger.error(f'Analyze error for {ticker}: {analysis["error"]}')
-    
+        return jsonify(analysis), 502
+
+    price = analysis['current_price']
+    analysis['stop_loss'] = round(price * 0.95, 2)
+    analysis['target_1'] = round(price * 1.10, 2)
+    analysis['target_2'] = round(price * 1.20, 2)
+    analysis['suggestion'] = _SUGGESTION_MAP.get(analysis['score'], '觀察等待')
+    analysis['rating'] = '⭐' * analysis['score']
+    logger.info(f'Analyze success: {ticker} score={analysis["score"]}')
     return jsonify(analysis)
 
 
 @app.route('/api/trades', methods=['GET'])
 def get_trades():
-    trades = []
-    for f in TRADES_DIR.glob('*.json'):
-        with open(f, 'r', encoding='utf-8') as fp:
-            trades.append(json.load(fp))
+    trades = _load_all_trades()
     trades.sort(key=lambda x: x.get('date', ''), reverse=True)
     logger.info(f'Get trades: {len(trades)} records')
     return jsonify(trades)
@@ -272,14 +337,17 @@ def get_trades():
 @app.route('/api/trades', methods=['POST'])
 def add_trade():
     data = request.json
-    trade_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+    if not data:
+        return jsonify({'error': 'Missing request body'}), 400
+
+    # 含微秒避免同秒衝突
+    trade_id = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
     data['id'] = trade_id
     data['created_at'] = datetime.now().isoformat()
-    
+
     filepath = TRADES_DIR / f"{trade_id}.json"
-    with open(filepath, 'w', encoding='utf-8') as fp:
-        json.dump(data, fp, ensure_ascii=False, indent=2)
-    
+    safe_json_write(filepath, data)
+
     logger.info(f'New trade added: {data.get("ticker")} {data.get("action")} {data.get("quantity")}')
     return jsonify({'success': True, 'id': trade_id})
 
@@ -287,87 +355,28 @@ def add_trade():
 @app.route('/api/portfolio')
 def get_portfolio():
     if PORTFOLIO_FILE.exists():
-        with open(PORTFOLIO_FILE, 'r', encoding='utf-8') as fp:
-            return jsonify(json.load(fp))
+        return jsonify(safe_json_read(PORTFOLIO_FILE))
     return jsonify({'positions': [], 'cash': 0})
 
 
 @app.route('/api/portfolio/summary')
 def portfolio_summary():
-    """Get portfolio summary with total assets and P&L"""
-    # Get trades
-    trades = []
-    for f in TRADES_DIR.glob('*.json'):
-        with open(f, 'r', encoding='utf-8') as fp:
-            trades.append(json.load(fp))
-    
+    trades = _load_all_trades()
     if not trades:
         return jsonify({
-            'cash': 5000,
-            'stock_value': 0,
-            'total_assets': 5000,
-            'total_cost': 0,
-            'total_pnl': 0,
-            'total_pnl_pct': 0,
-            'positions': []
+            'cash': 5000, 'stock_value': 0, 'total_assets': 5000,
+            'total_cost': 0, 'total_pnl': 0, 'total_pnl_pct': 0, 'positions': []
         })
-    
-    # Aggregate positions from trades
-    positions = {}
-    total_cost = 0
-    
-    for trade in trades:
-        ticker = trade.get('ticker', '').upper()
-        action = trade.get('action', '').lower()
-        quantity = int(trade.get('quantity', 0))
-        price = float(trade.get('entry_price', 0) or trade.get('price', 0))
-        
-        if not ticker:
-            continue
-            
-        if ticker not in positions:
-            positions[ticker] = {'quantity': 0, 'cost': 0}
-        
-        if action == 'buy':
-            positions[ticker]['quantity'] += quantity
-            positions[ticker]['cost'] += quantity * price
-            total_cost += quantity * price
-        elif action == 'sell':
-            positions[ticker]['quantity'] -= quantity
-            positions[ticker]['cost'] -= quantity * price
-            total_cost -= quantity * price
-    
-    # Get current prices and calculate P&L
-    stock_value = 0
-    position_details = []
-    
-    for ticker, pos in positions.items():
-        if pos['quantity'] > 0:
-            current_price_data = get_stock_price(ticker)
-            if 'error' not in current_price_data:
-                current_price = current_price_data['current_price']
-                current_value = pos['quantity'] * current_price
-                pnl = current_value - pos['cost']
-                pnl_pct = (pnl / pos['cost'] * 100) if pos['cost'] > 0 else 0
-                
-                stock_value += current_value
-                
-                position_details.append({
-                    'ticker': ticker,
-                    'quantity': pos['quantity'],
-                    'entry_price': round(pos['cost'] / pos['quantity'], 2),
-                    'current_price': round(current_price, 2),
-                    'value': round(current_value, 2),
-                    'cost': round(pos['cost'], 2),
-                    'pnl': round(pnl, 2),
-                    'pnl_pct': round(pnl_pct, 2)
-                })
-    
-    cash = 5000  # Default cash
+
+    positions = _aggregate_positions(trades)
+    total_cost = sum(p['cost'] for p in positions.values())
+    position_details, stock_value = _enrich_positions_with_prices(positions)
+
+    cash = 5000
     total_assets = cash + stock_value
-    total_pnl = total_assets - total_cost - cash
+    total_pnl = stock_value - total_cost
     total_pnl_pct = (total_pnl / total_cost * 100) if total_cost > 0 else 0
-    
+
     return jsonify({
         'cash': cash,
         'stock_value': round(stock_value, 2),
@@ -382,74 +391,69 @@ def portfolio_summary():
 
 @app.route('/api/batch-quote')
 def batch_quote():
-    """Batch quote for multiple tickers"""
     tickers = request.args.get('tickers', '').upper().split(',')
     tickers = [t.strip() for t in tickers if t.strip()]
-    
+
     if not tickers:
-        return jsonify({'error': 'Missing tickers'})
-    
+        return jsonify({'error': 'Missing tickers'}), 400
     if len(tickers) > 20:
-        return jsonify({'error': 'Max 20 tickers allowed'})
-    
-    results = {}
-    for ticker in tickers:
-        results[ticker] = get_stock_price(ticker)
-    
+        return jsonify({'error': 'Max 20 tickers allowed'}), 400
+
+    # 並行查詢
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {ticker: executor.submit(get_stock_price, ticker) for ticker in tickers}
+        results = {ticker: future.result() for ticker, future in futures.items()}
+
     logger.info(f'Batch quote: {len(tickers)} tickers')
     return jsonify(results)
 
 
 @app.route('/api/watchlist')
 def get_watchlist():
-    """Get watchlist"""
     return jsonify({'watchlist': _watchlist})
 
 
 @app.route('/api/watchlist', methods=['POST'])
 def update_watchlist():
-    """Update watchlist"""
     global _watchlist
     data = request.json
-    if 'watchlist' in data:
-        _watchlist = [t.upper().strip() for t in data['watchlist'] if t.strip()]
-        logger.info(f'Watchlist updated: {_watchlist}')
-        return jsonify({'success': True, 'watchlist': _watchlist})
-    return jsonify({'error': 'Invalid request'})
+    if not data or 'watchlist' not in data:
+        return jsonify({'error': 'Invalid request'}), 400
+    _watchlist = [t.upper().strip() for t in data['watchlist'] if t.strip()]
+    _save_watchlist(_watchlist)
+    logger.info(f'Watchlist updated: {_watchlist}')
+    return jsonify({'success': True, 'watchlist': _watchlist})
 
 
 @app.route('/api/history')
 def get_history():
-    """Get historical price data"""
     ticker = request.args.get('ticker', '').upper()
-    period = request.args.get('period', '1mo')  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
-    
+    period = request.args.get('period', '1mo')
+
     if not ticker:
-        return jsonify({'error': 'Missing ticker'})
-    
+        return jsonify({'error': 'Missing ticker'}), 400
+
     valid_periods = ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max']
     if period not in valid_periods:
-        return jsonify({'error': f'Invalid period. Valid: {valid_periods}'})
-    
+        return jsonify({'error': f'Invalid period. Valid: {valid_periods}'}), 400
+
     try:
-        stock = yf.Ticker(ticker)
-        hist = stock.history(period=period)
-        
+        hist = _get_stock_history(ticker, period)
         if hist.empty:
-            return jsonify({'error': 'No data'})
-        
-        # Convert to list of dicts
-        data = []
-        for idx, row in hist.iterrows():
-            data.append({
+            return jsonify({'error': 'No data'}), 404
+
+        data = [
+            {
                 'date': idx.isoformat(),
                 'open': float(row['Open']),
                 'high': float(row['High']),
                 'low': float(row['Low']),
                 'close': float(row['Close']),
                 'volume': int(row['Volume'])
-            })
-        
+            }
+            for idx, row in hist.iterrows()
+        ]
+
         logger.info(f'History: {ticker} {period} {len(data)} days')
         return jsonify({
             'ticker': ticker,
@@ -459,78 +463,27 @@ def get_history():
         })
     except Exception as e:
         logger.error(f'History error: {ticker} {e}')
-        return jsonify({'error': str(e)})
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/portfolio/performance')
 def portfolio_performance():
-    """Calculate portfolio performance"""
-    # Get trades
-    trades = []
-    for f in TRADES_DIR.glob('*.json'):
-        with open(f, 'r', encoding='utf-8') as fp:
-            trades.append(json.load(fp))
-    
+    trades = _load_all_trades()
     if not trades:
         return jsonify({'total_value': 0, 'total_cost': 0, 'pnl': 0, 'pnl_percent': 0})
-    
-    # Aggregate positions
-    positions = {}
-    total_cost = 0
-    
-    for trade in trades:
-        ticker = trade.get('ticker', '').upper()
-        action = trade.get('action', '').lower()
-        quantity = int(trade.get('quantity', 0))
-        price = float(trade.get('price', 0))
-        
-        if ticker not in positions:
-            positions[ticker] = {'quantity': 0, 'avg_price': 0, 'cost': 0}
-        
-        if action == 'buy':
-            old_qty = positions[ticker]['quantity']
-            old_cost = positions[ticker]['cost']
-            new_cost = old_cost + (quantity * price)
-            new_qty = old_qty + quantity
-            positions[ticker]['quantity'] = new_qty
-            positions[ticker]['avg_price'] = new_cost / new_qty if new_qty > 0 else 0
-            positions[ticker]['cost'] = new_cost
-            total_cost += quantity * price
-        elif action == 'sell':
-            positions[ticker]['quantity'] -= quantity
-            positions[ticker]['cost'] -= quantity * positions[ticker]['avg_price']
-            total_cost -= quantity * price
-    
-    # Get current prices and calculate P&L
-    total_value = 0
-    position_details = []
-    
-    for ticker, pos in positions.items():
-        if pos['quantity'] > 0:
-            current_price = get_stock_price(ticker)
-            if 'error' not in current_price:
-                current_value = pos['quantity'] * current_price['current_price']
-                cost_basis = pos['quantity'] * pos['avg_price']
-                pnl = current_value - cost_basis
-                pnl_percent = (pnl / cost_basis * 100) if cost_basis > 0 else 0
-                
-                position_details.append({
-                    'ticker': ticker,
-                    'quantity': pos['quantity'],
-                    'avg_price': round(pos['avg_price'], 2),
-                    'current_price': current_price['current_price'],
-                    'value': round(current_value, 2),
-                    'cost': round(cost_basis, 2),
-                    'pnl': round(pnl, 2),
-                    'pnl_percent': round(pnl_percent, 2)
-                })
-                total_value += current_value
-    
+
+    positions = _aggregate_positions(trades)
+    total_cost = sum(p['cost'] for p in positions.values())
+    position_details, total_value = _enrich_positions_with_prices(positions)
+
+    # 此端點歷史欄位名為 pnl_percent
+    for p in position_details:
+        p['pnl_percent'] = p.pop('pnl_pct')
+
     total_pnl = total_value - total_cost
     total_pnl_percent = (total_pnl / total_cost * 100) if total_cost > 0 else 0
-    
-    logger.info(f'Portfolio perf: value={total_value} cost={total_cost} pnl={total_pnl}')
-    
+
+    logger.info(f'Portfolio perf: value={total_value:.2f} cost={total_cost:.2f} pnl={total_pnl:.2f}')
     return jsonify({
         'positions': position_details,
         'total_value': round(total_value, 2),
@@ -541,30 +494,31 @@ def portfolio_performance():
     })
 
 
-# Price alert storage (in-memory)
-_price_alerts = {}
-
+# ---------------------------------------------------------------------------
+# 價格提醒
+# ---------------------------------------------------------------------------
 
 @app.route('/api/alerts', methods=['GET'])
 def get_alerts():
-    """Get all price alerts"""
     return jsonify({'alerts': _price_alerts})
 
 
 @app.route('/api/alerts', methods=['POST'])
 def set_alert():
-    """Set a price alert"""
     data = request.json
+    if not data:
+        return jsonify({'error': 'Missing request body'}), 400
+
     ticker = data.get('ticker', '').upper()
     target_price = float(data.get('target_price', 0))
-    condition = data.get('condition', 'above')  # above, below
-    
+    condition = data.get('condition', 'above')
+
     if not ticker or target_price <= 0:
-        return jsonify({'error': 'Invalid ticker or price'})
-    
+        return jsonify({'error': 'Invalid ticker or price'}), 400
+
     if ticker not in _price_alerts:
         _price_alerts[ticker] = []
-    
+
     alert = {
         'target_price': target_price,
         'condition': condition,
@@ -572,41 +526,40 @@ def set_alert():
         'triggered': False
     }
     _price_alerts[ticker].append(alert)
-    
+    _save_alerts(_price_alerts)
+
     logger.info(f'Alert set: {ticker} {condition} {target_price}')
     return jsonify({'success': True, 'alert': alert})
 
 
 @app.route('/api/alerts', methods=['DELETE'])
 def clear_alerts():
-    """Clear all alerts"""
     global _price_alerts
     _price_alerts = {}
+    _save_alerts(_price_alerts)
     logger.info('All alerts cleared')
     return jsonify({'success': True})
 
 
 @app.route('/api/alerts/check')
 def check_alerts():
-    """Check if any alerts are triggered"""
     triggered = []
-    
+
     for ticker, alerts in _price_alerts.items():
         current = get_stock_price(ticker)
         if 'error' in current:
             continue
-        
+
         price = current['current_price']
+        changed = False
         for alert in alerts:
             if alert['triggered']:
                 continue
-            
-            is_triggered = False
-            if alert['condition'] == 'above' and price >= alert['target_price']:
-                is_triggered = True
-            elif alert['condition'] == 'below' and price <= alert['target_price']:
-                is_triggered = True
-            
+
+            is_triggered = (
+                (alert['condition'] == 'above' and price >= alert['target_price']) or
+                (alert['condition'] == 'below' and price <= alert['target_price'])
+            )
             if is_triggered:
                 alert['triggered'] = True
                 alert['triggered_at'] = datetime.now().isoformat()
@@ -617,46 +570,48 @@ def check_alerts():
                     'condition': alert['condition'],
                     'current_price': price
                 })
-    
-    logger.info(f'Alerts checked: {len(triggered)} triggered')
-    return jsonify({
-        'triggered': triggered,
-        'timestamp': datetime.now().isoformat()
-    })
+                changed = True
 
+        if changed:
+            _save_alerts(_price_alerts)
+
+    logger.info(f'Alerts checked: {len(triggered)} triggered')
+    return jsonify({'triggered': triggered, 'timestamp': datetime.now().isoformat()})
+
+
+# ---------------------------------------------------------------------------
+# 風險評估
+# ---------------------------------------------------------------------------
 
 @app.route('/api/risk-assessment')
 def risk_assessment():
-    """Calculate portfolio risk metrics"""
-    # Get portfolio performance data
     perf_response = portfolio_performance()
     perf_data = perf_response.get_json()
-    
+
     if not perf_data.get('positions'):
         return jsonify({'risk_level': 'N/A', 'message': 'No positions'})
-    
-    # Calculate risk metrics
+
     positions = perf_data['positions']
     total_value = perf_data['total_value']
-    
-    # Position concentration
-    max_position = max([p['value'] / total_value for p in positions]) if total_value > 0 else 0
+
+    max_position = max(p['value'] / total_value for p in positions) if total_value > 0 else 0
     concentration_risk = 'HIGH' if max_position > 0.4 else 'MEDIUM' if max_position > 0.25 else 'LOW'
-    
-    # P&L distribution
+
     profitable = sum(1 for p in positions if p['pnl'] > 0)
-    losing = sum(1 for p in positions if p['pnl'] < 0)
     win_rate = profitable / len(positions) * 100 if positions else 0
-    
-    # Overall risk score (1-10, higher = riskier)
+
     risk_score = 5
-    if concentration_risk == 'HIGH': risk_score += 2
-    elif concentration_risk == 'MEDIUM': risk_score += 1
-    if win_rate < 40: risk_score += 2
-    elif win_rate < 60: risk_score += 1
-    
+    if concentration_risk == 'HIGH':
+        risk_score += 2
+    elif concentration_risk == 'MEDIUM':
+        risk_score += 1
+    if win_rate < 40:
+        risk_score += 2
+    elif win_rate < 60:
+        risk_score += 1
+
     risk_level = 'HIGH' if risk_score >= 7 else 'MEDIUM' if risk_score >= 4 else 'LOW'
-    
+
     recommendations = []
     if concentration_risk == 'HIGH':
         recommendations.append('建議分散投資，降低單一標的比重')
@@ -664,9 +619,8 @@ def risk_assessment():
         recommendations.append('建議檢視虧損部位，考慮停損')
     if len(positions) < 3:
         recommendations.append('建議增加投資標的數量分散風險')
-    
+
     logger.info(f'Risk assessment: level={risk_level} score={risk_score}')
-    
     return jsonify({
         'risk_level': risk_level,
         'risk_score': risk_score,
@@ -678,77 +632,77 @@ def risk_assessment():
     })
 
 
+# ---------------------------------------------------------------------------
+# 交易訊號
+# ---------------------------------------------------------------------------
+
 @app.route('/api/signals')
 def trading_signals():
-    """Generate trading signals for watchlist"""
     signals = []
-    
-    for ticker in _watchlist[:5]:  # Limit to 5 for performance
+
+    for ticker in _watchlist[:5]:
         try:
             analysis = technical_analysis(ticker)
-            if 'error' not in analysis:
-                signal = {
-                    'ticker': ticker,
-                    'price': analysis['current_price'],
-                    'trend': analysis['trend'],
-                    'rsi': round(analysis['rsi'], 1),
-                    'score': analysis['score'],
-                    'suggestion': analysis['suggestion']
-                }
-                
-                # 交易訊號
-                if analysis['rsi'] < 30 and analysis['trend'] == 'BULLISH':
-                    signal['action'] = '🔥 強烈買入'
-                elif analysis['rsi'] < 40:
-                    signal['action'] = '📈 考慮買入'
-                elif analysis['rsi'] > 70:
-                    signal['action'] = '⚠️ 考慮賣出'
-                else:
-                    signal['action'] = '➡️ 觀望'
-                
-                signals.append(signal)
+            if 'error' in analysis:
+                continue
+
+            rsi = analysis.get('rsi') or 0.0
+            score = analysis['score']
+
+            signal = {
+                'ticker': ticker,
+                'price': analysis['current_price'],
+                'trend': analysis['trend'],
+                'rsi': round(float(rsi), 1),
+                'score': score,
+                'suggestion': _SUGGESTION_MAP.get(score, '觀察等待'),
+            }
+
+            if rsi < 30 and analysis['trend'] == 'BULLISH':
+                signal['action'] = '強烈買入'
+            elif rsi < 40:
+                signal['action'] = '考慮買入'
+            elif rsi > 70:
+                signal['action'] = '考慮賣出'
+            else:
+                signal['action'] = '觀望'
+
+            signals.append(signal)
         except Exception as e:
             logger.error(f'Signal error: {ticker} {e}')
-    
-    logger.info(f'Signals generated: {len(signals)}')
-    return jsonify({
-        'signals': signals,
-        'timestamp': datetime.now().isoformat()
-    })
 
+    logger.info(f'Signals generated: {len(signals)}')
+    return jsonify({'signals': signals, 'timestamp': datetime.now().isoformat()})
+
+
+# ---------------------------------------------------------------------------
+# 交易統計
+# ---------------------------------------------------------------------------
 
 @app.route('/api/trades/analysis')
 def trades_analysis():
-    """Analyze trading history"""
-    trades = []
-    for f in TRADES_DIR.glob('*.json'):
-        with open(f, 'r', encoding='utf-8') as fp:
-            trades.append(json.load(fp))
-    
+    trades = _load_all_trades()
     if not trades:
         return jsonify({'message': 'No trades'})
-    
-    # Statistics
-    total_trades = len(trades)
+
     buy_trades = [t for t in trades if t.get('action', '').lower() == 'buy']
     sell_trades = [t for t in trades if t.get('action', '').lower() == 'sell']
-    
-    # By ticker
-    ticker_stats = {}
+
+    ticker_stats: dict = {}
     for trade in trades:
         ticker = trade.get('ticker', '').upper()
         if ticker not in ticker_stats:
             ticker_stats[ticker] = {'buy': 0, 'sell': 0, 'total': 0}
-        ticker_stats[ticker][trade.get('action', '').lower()] += 1
+        action = trade.get('action', '').lower()
+        if action in ticker_stats[ticker]:
+            ticker_stats[ticker][action] += 1
         ticker_stats[ticker]['total'] += 1
-    
-    # Recent activity
+
     recent = sorted(trades, key=lambda x: x.get('created_at', ''), reverse=True)[:5]
-    
-    logger.info(f'Trades analysis: {total_trades} trades')
-    
+    logger.info(f'Trades analysis: {len(trades)} trades')
+
     return jsonify({
-        'total_trades': total_trades,
+        'total_trades': len(trades),
         'buy_count': len(buy_trades),
         'sell_count': len(sell_trades),
         'by_ticker': ticker_stats,
@@ -757,7 +711,10 @@ def trades_analysis():
     })
 
 
-# Serve UI
+# ---------------------------------------------------------------------------
+# UI 靜態頁面
+# ---------------------------------------------------------------------------
+
 @app.route('/')
 def index():
     index_path = UI_DIR / 'index.html'
@@ -765,15 +722,12 @@ def index():
         return index_path.read_text(encoding='utf-8')
     return '<h1>NoFOMO</h1><p>UI not found</p>'
 
+
 @app.route('/jobs')
 def jobs():
-    jobs_path = UI_DIR / '..' / 'ui' / 'jobs.html'
+    jobs_path = Path(__file__).parent.parent / 'ui' / 'jobs.html'
     if jobs_path.exists():
         return jobs_path.read_text(encoding='utf-8')
-    # Try alternate path
-    jobs_path2 = Path(__file__).parent.parent / 'ui' / 'jobs.html'
-    if jobs_path2.exists():
-        return jobs_path2.read_text(encoding='utf-8')
     return '<h1>Jobs</h1><p>Not found</p>'
 
 

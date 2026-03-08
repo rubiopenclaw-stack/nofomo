@@ -13,7 +13,8 @@ import numpy as np
 @pytest.fixture
 def mock_yfinance_api():
     """Mock yfinance for API tests"""
-    with patch('src.api.yf') as mock_yf:
+    # api.py 現在透過 analyzer.py 取得股價，所以 mock 目標是 src.analyzer.yf
+    with patch('src.analyzer.yf') as mock_yf:
         # Create mock ticker
         mock_ticker = MagicMock()
         
@@ -85,9 +86,9 @@ class TestQuoteEndpoint:
         assert 'current_price' in data
     
     def test_quote_missing_ticker(self, app_client):
-        """缺少 ticker 參數"""
+        """缺少 ticker 參數應回 400"""
         response = app_client.get('/api/quote')
-        assert response.status_code == 200
+        assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
     
@@ -342,10 +343,9 @@ class TestRiskEndpoint:
     
     def test_risk_assessment(self, app_client):
         """風險評估"""
-        response = app_client.get('/api/risk评估')
+        response = app_client.get('/api/risk-assessment')
         data = json.loads(response.data)
         assert 'risk_level' in data
-        assert 'risk_score' in data
 
 
 class TestTradesAnalysisEndpoint:

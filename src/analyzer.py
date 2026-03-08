@@ -2,6 +2,7 @@
 股票價格獲取與技術分析
 """
 
+import math
 import yfinance as yf
 import pandas as pd
 from typing import Dict, List, Optional
@@ -12,23 +13,19 @@ def get_stock_price(ticker: str) -> Dict:
     """取得即時股價"""
     try:
         stock = yf.Ticker(ticker)
-        info = stock.info
-        
-        # 取得近期股價
+        info = stock.info  # 只呼叫一次
+
         hist = stock.history(period='1d')
-        current_price = hist['Close'].iloc[-1] if not hist.empty else 0
-        
-        # 52週高低
-        week52 = stock.info.get('fiftyTwoWeekLow', 0), stock.info.get('fiftyTwoWeekHigh', 0)
-        
+        current_price = float(hist['Close'].iloc[-1]) if not hist.empty else 0
+
         return {
             'ticker': ticker.upper(),
             'current_price': current_price,
             'currency': info.get('currency', 'USD'),
             'market_cap': info.get('marketCap'),
             'volume': info.get('volume'),
-            'week52_low': week52[0],
-            'week52_high': week52[1],
+            'week52_low': info.get('fiftyTwoWeekLow', 0),
+            'week52_high': info.get('fiftyTwoWeekHigh', 0),
             'name': info.get('shortName', ticker),
             'timestamp': datetime.now().isoformat()
         }
@@ -56,14 +53,23 @@ def calculate_rsi(df: pd.DataFrame, period: int = 14) -> Optional[float]:
     """計算 RSI"""
     if df.empty or 'Close' not in df:
         return None
-    
+
     delta = df['Close'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-    
+
+    # loss=0 且 gain>0 時 rs=inf → RSI=100；兩者均為 0 時 rs=NaN
     rs = gain / loss
     rsi = 100 - (100 / (1 + rs))
-    return rsi.iloc[-1]
+    result = rsi.iloc[-1]
+
+    if pd.isna(result):
+        return None
+    result_f = float(result)
+    # rsi 公式值域 [0,100]，inf 理論上不會出現，但保險起見
+    if math.isinf(result_f):
+        return None
+    return result_f
 
 
 def calculate_macd(df: pd.DataFrame) -> Dict:
@@ -123,9 +129,9 @@ def technical_analysis(ticker: str) -> Dict:
     macd = calculate_macd(df)
     bollinger = calculate_bollinger(df)
     
-    # 成交量
-    volume = df['Volume'].iloc[-1]
-    avg_volume = df['Volume'].mean()
+    # 成交量（轉為 Python 原生型別，確保 JSON 可序列化）
+    volume = int(df['Volume'].iloc[-1])
+    avg_volume = float(df['Volume'].mean())
     
     # 趨勢判斷
     trend = 'NEUTRAL'
