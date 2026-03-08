@@ -78,7 +78,7 @@
           try {
             const tradesRes = await axios.get(`${API_BASE}/trades`);
             setTrades(tradesRes.data);
-            const portfolioRes = await axios.get(`${API_BASE}/portfolio`);
+            const portfolioRes = await axios.get(`${API_BASE}/portfolio/summary`);
             setPortfolio(portfolioRes.data);
           } catch (e) {
             console.log('API not available');
@@ -417,22 +417,85 @@
       }
       
       function StatsTab({ trades, portfolio }) {
-        const buyCount = trades?.filter(t => t.action === 'BUY').length || 0;
-        const sellCount = trades?.filter(t => t.action === 'SELL').length || 0;
+        // Portfolio Summary
+        const totalAssets = portfolio?.total_assets || 0;
+        const cash = portfolio?.cash || 0;
+        const stockValue = portfolio?.stock_value || 0;
+        const totalPnl = portfolio?.total_pnl || 0;
+        const totalPnlPct = portfolio?.total_pnl_pct || 0;
+        const positions = portfolio?.positions || [];
         
-        const scoreCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-        trades?.forEach(t => {
-          const score = t.score || 3;
-          if (score >= 4) scoreCounts[5]++;
-          else if (score >= 3) scoreCounts[4]++;
-          else if (score >= 2) scoreCounts[3]++;
-          else scoreCounts[2]++;
-        });
-        
-        const totalTrades = trades?.length || 0;
+        const pnlClass = totalPnl >= 0 ? 'text-success' : 'text-danger';
         
         return (
           <div>
+            {/* 總資產儀表板 */}
+            <div className="card mb-4" style={{ background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', color: 'white' }}>
+              <div className="card-body">
+                <div className="row text-center">
+                  <div className="col-4">
+                    <div className="text-white-50 small">總資產</div>
+                    <h3 className="mb-0">${totalAssets.toLocaleString()}</h3>
+                  </div>
+                  <div className="col-4">
+                    <div className="text-white-50 small">現金</div>
+                    <h4 className="mb-0">${cash.toLocaleString()}</h4>
+                  </div>
+                  <div className="col-4">
+                    <div className="text-white-50 small">股票價值</div>
+                    <h4 className="mb-0">${stockValue.toLocaleString()}</h4>
+                  </div>
+                </div>
+                <hr className="border-light" />
+                <div className="text-center">
+                  <div className="text-white-50 small">總損益</div>
+                  <h2 className={`mb-0 ${pnlClass}`}>
+                    {totalPnl >= 0 ? '+' : ''}${totalPnl.toLocaleString()} ({totalPnlPct.toFixed(2)}%)
+                  </h2>
+                </div>
+              </div>
+            </div>
+            
+            {/* 持股明細 */}
+            {positions.length > 0 && (
+              <div className="card mb-4">
+                <div className="card-header">
+                  <h6 className="mb-0">📊 持股明細</h6>
+                </div>
+                <div className="card-body p-0">
+                  <div className="table-responsive">
+                    <table className="table table-hover mb-0">
+                      <thead>
+                        <tr>
+                          <th>股票</th>
+                          <th className="text-end">股數</th>
+                          <th className="text-end">買入</th>
+                          <th className="text-end">現價</th>
+                          <th className="text-end">價值</th>
+                          <th className="text-end">損益</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {positions.map((pos, idx) => (
+                          <tr key={idx}>
+                            <td><strong>{pos.ticker}</strong></td>
+                            <td className="text-end">{pos.quantity}</td>
+                            <td className="text-end">${pos.entry_price}</td>
+                            <td className="text-end">${pos.current_price}</td>
+                            <td className="text-end">${pos.value?.toLocaleString()}</td>
+                            <td className={`text-end ${pos.pnl >= 0 ? 'text-success' : 'text-danger'}`}>
+                              {pos.pnl >= 0 ? '+' : ''}{pos.pnl?.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* 交易統計 */}
             <div className="row g-3 mb-4">
               <div className="col-6">
                 <div className="card text-center">
