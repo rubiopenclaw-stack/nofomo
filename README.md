@@ -6,9 +6,8 @@
 
 | 層面 | 技術 |
 |------|------|
-| 前端 | React + Vite |
-| 後端 | FastAPI (Python) |
-| 伺服器 | Flask |
+| 前端 | React 18 (CDN) + Bootstrap 5 |
+| 後端 | Flask (Python) |
 | 資料儲存 | JSON 檔案 |
 
 ## 🎯 核心功能
@@ -23,25 +22,13 @@
 
 ## 🚀 快速開始
 
-### 後端（FastAPI）
-
 ```bash
 cd nofomo
 pip install -r requirements.txt
-python -m src.api
+python src/api.py
 ```
 
-後端伺服器：http://localhost:5000
-
-### 前端（React + Vite）
-
-```bash
-cd ui
-npm install
-npm run dev
-```
-
-前端伺服器：http://localhost:5173
+開啟瀏覽器：http://localhost:5000
 
 ---
 
@@ -54,7 +41,7 @@ npm run dev
 | `/api/quote` | GET | 查詢個股報價 |
 | `/api/analyze` | GET | 技術分析報告 |
 | `/api/batch-quote` | GET | 批量查詢報價 |
-| `/api/watchlist` | GET | 取得自選股清單 |
+| `/api/watchlist` | GET/POST | 取得／更新自選股清單（持久化） |
 
 ### 交易記錄
 
@@ -77,10 +64,17 @@ npm run dev
 
 | 端點 | 方法 | 說明 |
 |------|------|------|
-| `/api/alerts` | GET/POST/DELETE | 價格警示 |
+| `/api/alerts` | GET/POST/DELETE | 價格警示（持久化） |
 | `/api/alerts/check` | GET | 檢查警示觸發 |
 | `/api/signals` | GET | 交易訊號 |
-| `/api/risk评估` | GET | 風險評估 |
+| `/api/risk-assessment` | GET | 風險評估 |
+
+### 系統
+
+| 端點 | 方法 | 說明 |
+|------|------|------|
+| `/api/health` | GET | 健康檢查 |
+| `/api/cache/clear` | POST | 清除快取 |
 
 ---
 
@@ -100,15 +94,18 @@ npm run dev
 ```
 nofomo/
 ├── src/
-│   ├── api.py           # FastAPI 後端伺服器
-│   ├── analyzer.py      # 技術分析模組
-│   └── portfolio.py    # 持倉管理
-├── ui/                  # React + Vite 前端
-│   ├── src/             # React 元件
-│   └── package.json
+│   ├── api.py           # Flask 後端伺服器（24 個 API 端點）
+│   ├── analyzer.py      # 技術分析模組（MA/RSI/MACD/布林通道）
+│   └── portfolio.py     # 持倉管理與損益計算
+├── ui/
+│   └── public/
+│       └── index.html   # React 前端（單頁應用）
+├── tests/               # Pytest 測試套件
 ├── data/
-│   ├── trades/          # 交易記錄
-│   └── portfolio.json   # 持倉資料
+│   ├── trades/          # 交易記錄（每筆一個 JSON）
+│   ├── portfolio.json   # 持倉資料
+│   ├── watchlist.json   # 自選股清單（持久化）
+│   └── alerts.json      # 價格警示（持久化）
 ├── requirements.txt
 └── README.md
 ```
