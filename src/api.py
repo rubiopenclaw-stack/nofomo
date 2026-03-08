@@ -7,6 +7,31 @@ from pathlib import Path
 import logging
 import time
 from functools import lru_cache
+import threading
+
+# File lock for JSON operations
+_file_locks = {}
+
+def get_file_lock(filepath):
+    """Get or create a lock for a specific file"""
+    filepath = str(filepath)
+    if filepath not in _file_locks:
+        _file_locks[filepath] = threading.Lock()
+    return _file_locks[filepath]
+
+def safe_json_write(filepath, data):
+    """Thread-safe JSON write"""
+    lock = get_file_lock(filepath)
+    with lock:
+        with open(filepath, 'w', encoding='utf-8') as fp:
+            json.dump(data, fp, ensure_ascii=False, indent=2)
+
+def safe_json_read(filepath):
+    """Thread-safe JSON read"""
+    lock = get_file_lock(filepath)
+    with lock:
+        with open(filepath, 'r', encoding='utf-8') as fp:
+            return json.load(fp)
 
 # Setup logging
 LOG_DIR = Path(__file__).parent / 'logs'
@@ -600,7 +625,7 @@ def check_alerts():
     })
 
 
-@app.route('/api/risk评估')
+@app.route('/api/risk-assessment')
 def risk_assessment():
     """Calculate portfolio risk metrics"""
     # Get portfolio performance data

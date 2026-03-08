@@ -233,3 +233,4 @@
 2026-03-08 12:50:55,958 - INFO - 127.0.0.1 - - [08/Mar/2026 12:50:55] "[33mGET /api/chart/TSM HTTP/1.1[0m" 404 -
 2026-03-08 12:50:59,115 - INFO - 127.0.0.1 - - [08/Mar/2026 12:50:59] "[33mGET /api/chart/ONDS HTTP/1.1[0m" 404 -
 2026-03-08 12:51:00,863 - INFO - 127.0.0.1 - - [08/Mar/2026 12:51:00] "[33mGET /api/chart/AAOI HTTP/1.1[0m" 404 -
+2026-03-08 18:14:45,479 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
