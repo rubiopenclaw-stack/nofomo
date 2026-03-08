@@ -2,35 +2,85 @@
 
 > 記錄每一筆股票交易，並於交易當下提供技術分析建議，幫助投資人避免重蹈相同錯誤。
 
+## 🛠 技術棧
+
+| 層面 | 技術 |
+|------|------|
+| 前端 | React + Vite |
+| 後端 | FastAPI (Python) |
+| 伺服器 | Flask |
+| 資料儲存 | JSON 檔案 |
+
 ## 🎯 核心功能
 
-| 功能 | 說明 |
-|------|------|
-| 📊 即時股價 | 搜尋最新報價、52週高低點 |
-| 📝 交易記錄 | 記錄每筆買賣、價位、數量 |
-| 💡 點位建議 | 根據技術分析給出買入/賣出建議 |
-| 📈 資產管理 | 追蹤持倉、損益、報酬率 |
-| 🔍 錯誤回顧 | 分析過去失誤操作，提出改進建議 |
+- 📊 **即時股價** - 搜尋最新報價、52週高低點
+- 📝 **交易記錄** - 記錄每筆買賣、價位、數量
+- 💡 **點位建議** - 根據技術分析給出買入/賣出建議
+- 📈 **總資產儀表板** - 追蹤持倉、損益、報酬率
+- 🔍 **錯誤回顧** - 分析過去失誤操作，提出改進建議
+
+---
 
 ## 🚀 快速開始
 
-### 1. 安裝依賴
+### 後端（FastAPI）
 
 ```bash
+cd nofomo
 pip install -r requirements.txt
+python -m src.api
 ```
 
-### 2. 啟動 App
+後端伺服器：http://localhost:5000
+
+### 前端（React + Vite）
 
 ```bash
-streamlit run ui/app.py
+cd ui
+npm install
+npm run dev
 ```
 
-### 3. 使用方式
+前端伺服器：http://localhost:5173
 
-- 打開瀏覽器 http://localhost:8501
-- 輸入股票代號進行分析
-- 記錄你的買賣交易
+---
+
+## 📡 API 端點說明
+
+### 報價與分析
+
+| 端點 | 方法 | 說明 |
+|------|------|------|
+| `/api/quote` | GET | 查詢個股報價 |
+| `/api/analyze` | GET | 技術分析報告 |
+| `/api/batch-quote` | GET | 批量查詢報價 |
+| `/api/watchlist` | GET | 取得自選股清單 |
+
+### 交易記錄
+
+| 端點 | 方法 | 說明 |
+|------|------|------|
+| `/api/trades` | GET | 取得所有交易紀錄 |
+| `/api/trades` | POST | 新增交易紀錄 |
+| `/api/trades/analysis` | GET | 交易紀錄分析 |
+
+### 投資組合
+
+| 端點 | 方法 | 說明 |
+|------|------|------|
+| `/api/portfolio` | GET | 取得目前持倉 |
+| `/api/portfolio/summary` | GET | **總資產儀表板** |
+| `/api/portfolio/performance` | GET | 投資組合績效 |
+| `/api/history` | GET | 歷史記錄 |
+
+### 警示與訊號
+
+| 端點 | 方法 | 說明 |
+|------|------|------|
+| `/api/alerts` | GET/POST/DELETE | 價格警示 |
+| `/api/alerts/check` | GET | 檢查警示觸發 |
+| `/api/signals` | GET | 交易訊號 |
+| `/api/risk评估` | GET | 風險評估 |
 
 ---
 
@@ -50,13 +100,15 @@ streamlit run ui/app.py
 ```
 nofomo/
 ├── src/
-│   ├── portfolio.py      # 持倉管理
-│   └── analyzer.py     # 技術分析
-├── ui/
-│   └── app.py          # Streamlit Web App
+│   ├── api.py           # FastAPI 後端伺服器
+│   ├── analyzer.py      # 技術分析模組
+│   └── portfolio.py    # 持倉管理
+├── ui/                  # React + Vite 前端
+│   ├── src/             # React 元件
+│   └── package.json
 ├── data/
-│   ├── trades/         # 交易記錄
-│   └── portfolio.json  # 持倉資料
+│   ├── trades/          # 交易記錄
+│   └── portfolio.json   # 持倉資料
 ├── requirements.txt
 └── README.md
 ```

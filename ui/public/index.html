@@ -9,36 +9,489 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
       :root {
-        --primary: #4F46E5;
+        /* 主色調 - 現代化漸層系統 */
+        --primary: #6366F1;
+        --primary-light: #818CF8;
+        --primary-dark: #4F46E5;
+        --primary-glow: rgba(99, 102, 241, 0.25);
+        
+        /* 漲跌色 - 更鮮明 */
         --success: #10B981;
+        --success-light: #D1FAE5;
+        --success-bg: rgba(16, 185, 129, 0.1);
         --danger: #EF4444;
+        --danger-light: #FEE2E2;
+        --danger-bg: rgba(239, 68, 68, 0.1);
         --warning: #F59E0B;
+        --warning-light: #FEF3C7;
+        
+        /* 中性色 - 更柔和 */
+        --neutral-50: #F9FAFB;
+        --neutral-100: #F3F4F6;
+        --neutral-200: #E5E7EB;
+        --neutral-300: #D1D5DB;
+        --neutral-400: #9CA3AF;
+        --neutral-500: #6B7280;
+        --neutral-600: #4B5563;
+        --neutral-700: #374151;
+        --neutral-800: #1F2937;
+        --neutral-900: #111827;
+        
+        /* 背景色 - 加入層次 */
+        --bg-main: linear-gradient(135deg, #F9FAFB 0%, #EEF2FF 100%);
+        --bg-card: #FFFFFF;
+        --bg-accent: #EEF2FF;
+        --bg-hover: #F3F4F6;
+        
+        /* 陰影 - 更精緻 */
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+        --shadow-lg: 0 10px 25px rgba(0,0,0,0.12);
+        --shadow-glow: 0 0 20px var(--primary-glow);
+        
+        /* 圓角 - 更現代 */
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 24px;
+        
+        /* 字體 */
+        --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+        
+        /* 轉場 */
+        --transition: all 0.2s ease;
       }
+      
+      /* 暗色模式 */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-main: linear-gradient(135deg, #111827 0%, #1F2937 100%);
+          --bg-card: #1F2937;
+          --bg-accent: #374151;
+          --bg-hover: #374151;
+          --neutral-50: #1F2937;
+          --neutral-100: #374151;
+          --neutral-200: #4B5563;
+          --neutral-300: #6B7280;
+          --neutral-400: #9CA3AF;
+          --neutral-500: #D1D5DB;
+          --neutral-600: #E5E7EB;
+          --neutral-700: #F3F4F6;
+          --neutral-800: #F9FAFB;
+          --neutral-900: #FFFFFF;
+          --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+          --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .card { background: var(--bg-card); color: var(--neutral-200); }
+        .bg-white { background: var(--bg-card) !important; }
+        .bg-light { background: var(--bg-accent) !important; }
+        .text-muted { color: var(--neutral-400) !important; }
+        .table { color: var(--neutral-200); }
+        .table-hover tbody tr:hover { background: var(--bg-hover); }
+        .nav-tabs .nav-link { color: var(--neutral-400); }
+        .nav-tabs .nav-link.active { background: var(--bg-card); color: var(--primary); }
+        .form-control { background: var(--bg-accent); border-color: var(--neutral-300); color: var(--neutral-200); }
+        .form-control:focus { background: var(--bg-card); }
+        .form-select { background-color: var(--bg-card); color: var(--neutral-200); }
+        .badge.bg-warning { background-color: var(--warning) !important; }
+      }
+      
       body {
-        background: #F8FAFC;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--bg-main);
+        font-family: var(--font-sans);
+        min-height: 100vh;
+        color: var(--neutral-800);
       }
+      
+      /* 頂部導航優化 */
+      .app-header {
+        background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      
+      /* 標籤導航 - 更時尚 */
+      .nav-tabs {
+        border: none;
+        gap: 8px;
+      }
+      .nav-tabs .nav-link {
+        border: none;
+        border-radius: var(--radius-lg);
+        padding: 10px 20px;
+        font-weight: 500;
+        color: var(--neutral-500);
+        background: var(--neutral-100);
+        transition: var(--transition);
+      }
+      .nav-tabs .nav-link:hover {
+        background: var(--neutral-200);
+        transform: translateY(-1px);
+      }
+      .nav-tabs .nav-link.active {
+        background: var(--primary);
+        color: white;
+        box-shadow: var(--shadow-glow);
+      }
+      
+      /* 卡片樣式 */
+      .card {
+        border: none;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition);
+      }
+      .card:hover {
+        box-shadow: var(--shadow-md);
+      }
+      
+      /* 對話氣泡 - 現代化設計 */
       .chat-container {
-        height: calc(100vh - 200px);
+        height: calc(100vh - 220px);
         overflow-y: auto;
+        scroll-behavior: smooth;
       }
+      .chat-bubble {
+        max-width: 85%;
+        padding: 14px 18px;
+        border-radius: var(--radius-xl);
+        margin-bottom: 12px;
+        animation: bubbleIn 0.3s ease;
+        line-height: 1.6;
+      }
+      @keyframes bubbleIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .chat-bubble.user {
+        background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+        color: white;
+        border-bottom-right-radius: 4px;
+        margin-left: auto;
+      }
+      .chat-bubble.assistant {
+        background: var(--bg-card);
+        color: var(--neutral-800);
+        border-bottom-left-radius: 4px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--neutral-200);
+      }
+      
+      /* 輸入框 - 懸浮式設計 */
+      .input-wrapper {
+        position: sticky;
+        bottom: 70px;
+        background: var(--bg-main);
+        padding: 12px 0;
+        backdrop-filter: blur(10px);
+      }
+      .input-group {
+        background: var(--bg-card);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: 6px;
+        border: 2px solid transparent;
+        transition: var(--transition);
+      }
+      .input-group:focus-within {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-glow);
+      }
+      .input-group .form-control {
+        border: none;
+        background: transparent;
+        padding: 12px 16px;
+      }
+      .input-group .form-control:focus {
+        box-shadow: none;
+      }
+      .input-group .btn {
+        border-radius: var(--radius-lg);
+        padding: 10px 20px;
+      }
+      
+      /* 按鈕 - 漸層效果 */
+      .btn-primary {
+        background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+        border: none;
+        font-weight: 500;
+        transition: var(--transition);
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-glow);
+      }
+      .btn-primary:disabled {
+        opacity: 0.7;
+        transform: none;
+      }
+      
+      /* 交易卡片 - 更精緻 */
       .trade-card {
-        background: white;
-        border-radius: 12px;
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
         padding: 16px;
         margin-bottom: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--neutral-200);
+        transition: var(--transition);
       }
-      .trade-card.buy { border-left: 4px solid #10B981; }
-      .trade-card.sell { border-left: 4px solid #EF4444; }
-      .rating-star { color: #F59E0B; }
-      .pnl-positive { color: #10B981; }
-      .pnl-negative { color: #EF4444; }
+      .trade-card:hover {
+        transform: translateX(4px);
+        box-shadow: var(--shadow-md);
+      }
+      .trade-card.buy { 
+        border-left: 4px solid var(--success);
+        background: linear-gradient(90deg, var(--success-bg) 0%, var(--bg-card) 30%);
+      }
+      .trade-card.sell { 
+        border-left: 4px solid var(--danger);
+        background: linear-gradient(90deg, var(--danger-bg) 0%, var(--bg-card) 30%);
+      }
+      
+      /* 漲跌顏色 */
+      .pnl-positive { 
+        color: var(--success); 
+        font-weight: 600; 
+      }
+      .pnl-negative { 
+        color: var(--danger); 
+        font-weight: 600; 
+      }
+      .pnl-bg-positive { 
+        background-color: var(--success-bg) !important; 
+      }
+      .pnl-bg-negative { 
+        background-color: var(--danger-bg) !important; 
+      }
+      
+      /* 評分星星 */
+      .rating-star { 
+        color: var(--warning); 
+      }
+      
+      /* 趨勢指示器 */
+      .trend-up { color: var(--success); }
+      .trend-down { color: var(--danger); }
+      .trend-neutral { color: var(--neutral-400); }
+      .trend-arrow { display: inline-flex; align-items: center; gap: 4px; }
+      
+      /* 分析卡片 */
       .analysis-card {
-        background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-        border-radius: 12px;
+        background: linear-gradient(135deg, var(--bg-accent) 0%, rgba(139, 92, 246, 0.1) 100%);
+        border-radius: var(--radius-lg);
         padding: 16px;
         margin: 12px 0;
+        border: 1px solid rgba(139, 92, 246, 0.2);
+      }
+      
+      /* K線圖容器 */
+      .chart-container {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--neutral-200);
+      }
+      
+      /* 狀態徽章 */
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: var(--radius-xl);
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+      .status-badge.online {
+        background: var(--success-bg);
+        color: var(--success);
+      }
+      .status-badge.offline {
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+      .status-dot.online { background: var(--success); }
+      .status-dot.offline { background: var(--danger); }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      
+      /* 行動裝置底部導航 */
+      .mobile-nav { 
+        position: fixed; 
+        bottom: 0; 
+        left: 0; 
+        right: 0; 
+        background: var(--bg-card);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        z-index: 1000;
+        padding: 8px;
+        backdrop-filter: blur(10px);
+      }
+      .mobile-nav .nav-link {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.75rem;
+        padding: 8px;
+        border-radius: var(--radius-md);
+        transition: var(--transition);
+        color: var(--neutral-400);
+      }
+      .mobile-nav .nav-link.active {
+        color: var(--primary);
+        background: var(--primary-glow);
+      }
+      .mobile-nav .nav-link i { 
+        font-size: 1.4rem; 
+        margin-bottom: 2px;
+      }
+      
+      /* 表格優化 */
+      .table {
+        font-size: 0.9rem;
+      }
+      .table th {
+        font-weight: 600;
+        color: var(--neutral-600);
+        border-bottom-width: 2px;
+        padding: 12px 8px;
+      }
+      .table td {
+        padding: 12px 8px;
+        vertical-align: middle;
+      }
+      .table-hover tbody tr {
+        transition: var(--transition);
+      }
+      .table-hover tbody tr:hover {
+        transform: scale(1.01);
+      }
+      
+      /* 空狀態 */
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--neutral-400);
+      }
+      .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+      
+      /* 載入動畫 */
+      .loading-dots::after {
+        content: '';
+        animation: dots 1.5s infinite;
+      }
+      @keyframes dots {
+        0%, 20% { content: ''; }
+        40% { content: '.'; }
+        60% { content: '..'; }
+        80%, 100% { content: '...'; }
+      }
+      
+      /* 進度條美化 */
+      .progress {
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        background: var(--neutral-200);
+      }
+      .progress-bar {
+        background: linear-gradient(90deg, var(--primary) 0%, #8B5CF6 100%);
+        transition: width 0.5s ease;
+      }
+      
+      /* 總資產儀表板 */
+      .portfolio-card {
+        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A855F7 100%);
+        color: white;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-lg), 0 0 40px rgba(139, 92, 246, 0.3);
+      }
+      .portfolio-card .text-white-50 {
+        color: rgba(255,255,255,0.7) !important;
+      }
+      .portfolio-card hr {
+        border-color: rgba(255,255,255,0.2);
+      }
+      
+      /* 徽章樣式 */
+      .badge {
+        font-weight: 500;
+        padding: 6px 10px;
+        border-radius: var(--radius-md);
+      }
+      
+      /* 趨勢指示箭頭動畫 */
+      .trend-icon {
+        display: inline-block;
+        transition: transform 0.3s ease;
+      }
+      .trend-up .trend-icon {
+        animation: bounceUp 1s infinite;
+      }
+      .trend-down .trend-icon {
+        animation: bounceDown 1s infinite;
+      }
+      @keyframes bounceUp {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+      }
+      @keyframes bounceDown {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(3px); }
+      }
+      
+      /* 響應式設計 */
+      @media (max-width: 768px) {
+        .container-fluid { padding: 0.75rem; }
+        .card-body { padding: 1rem; }
+        .chat-container { height: calc(100vh - 260px) !important; }
+        h4, .h4 { font-size: 1.25rem; }
+        .nav-tabs .nav-link { 
+          padding: 8px 12px; 
+          font-size: 0.85rem; 
+        }
+        .chat-bubble {
+          padding: 12px 14px;
+          font-size: 0.9rem;
+        }
+        .trade-card {
+          padding: 12px;
+        }
+        .portfolio-card .card-body { padding: 1.25rem; }
+        .portfolio-card h3 { font-size: 1.5rem !important; }
+        .portfolio-card h4 { font-size: 1.1rem !important; }
+        .portfolio-card h2 { font-size: 1.5rem !important; }
+      }
+      
+      @media (max-width: 576px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .table th, .table td { 
+          padding: 0.5rem 0.25rem; 
+          font-size: 0.8rem; 
+        }
+        .chart-container { padding: 12px; }
+        #kline-chart { height: 250px !important; }
+      }
+      
+      @media (min-width: 769px) {
+        .mobile-nav { display: none; }
+        .chat-container { height: calc(100vh - 200px); }
+        .input-wrapper { bottom: 0; }
       }
     </style>
   </head>
@@ -49,6 +502,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     
     <script type="text/babel">
       const { useState, useEffect, useRef } = React;
@@ -64,15 +518,28 @@
         const [loading, setLoading] = useState(false);
         const [trades, setTrades] = useState([]);
         const [portfolio, setPortfolio] = useState(null);
+        const [apiStatus, setApiStatus] = useState('checking');
         const messagesEndRef = useRef(null);
         
         useEffect(() => {
           loadData();
+          // 定期檢查 API 狀態
+          const statusCheck = setInterval(checkApiStatus, 30000);
+          return () => clearInterval(statusCheck);
         }, []);
         
         useEffect(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, [messages]);
+        
+        const checkApiStatus = async () => {
+          try {
+            await axios.get(`${API_BASE}/health`, { timeout: 3000 });
+            setApiStatus('online');
+          } catch (e) {
+            setApiStatus('offline');
+          }
+        };
         
         const loadData = async () => {
           try {
@@ -80,8 +547,10 @@
             setTrades(tradesRes.data);
             const portfolioRes = await axios.get(`${API_BASE}/portfolio/summary`);
             setPortfolio(portfolioRes.data);
+            setApiStatus('online');
           } catch (e) {
             console.log('API not available');
+            setApiStatus('offline');
           }
         };
         
@@ -286,24 +755,27 @@
         return (
           <div className="container-fluid py-3">
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <h4 className="mb-0">📈 NoFOMO</h4>
-              <span className="badge bg-success">API 連線中</span>
+              <h4 className="app-header mb-0">📈 NoFOMO</h4>
+              <div className={`status-badge ${apiStatus}`}>
+                <span className={`status-dot ${apiStatus}`}></span>
+                {apiStatus === 'online' ? '連線中' : apiStatus === 'checking' ? '檢查中...' : '離線'}
+              </div>
             </div>
             
             <ul className="nav nav-tabs mb-3">
               <li className="nav-item">
                 <button className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
-                  💬 對話
+                  <i className="bi bi-chat-dots me-1"></i> 對話
                 </button>
               </li>
               <li className="nav-item">
                 <button className={`nav-link ${activeTab === 'trades' ? 'active' : ''}`} onClick={() => setActiveTab('trades')}>
-                  📋 日誌 ({trades.length})
+                  <i className="bi bi-journal-text me-1"></i> 日誌 <span className="badge bg-secondary ms-1" style={{fontSize:'0.7rem'}}>{trades.length}</span>
                 </button>
               </li>
               <li className="nav-item">
                 <button className={`nav-link ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>
-                  📊 統計
+                  <i className="bi bi-pie-chart me-1"></i> 統計
                 </button>
               </li>
             </ul>
@@ -322,6 +794,39 @@
               {activeTab === 'trades' && <TradesTab trades={trades} />}
               {activeTab === 'stats' && <StatsTab trades={trades} portfolio={portfolio} />}
             </div>
+            
+            {/* 行動裝置底部導航 */}
+            <div className="mobile-nav d-md-none">
+              <ul className="nav justify-content-around">
+                <li className="nav-item">
+                  <button 
+                    className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('chat')}
+                  >
+                    <i className="bi bi-chat-dots"></i>
+                    <span>對話</span>
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button 
+                    className={`nav-link ${activeTab === 'trades' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('trades')}
+                  >
+                    <i className="bi bi-journal-text"></i>
+                    <span>日誌</span>
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button 
+                    className={`nav-link ${activeTab === 'stats' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('stats')}
+                  >
+                    <i className="bi bi-pie-chart"></i>
+                    <span>統計</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
           </div>
         );
       }
@@ -329,35 +834,38 @@
       function ChatTab({ messages, input, setInput, handleSend, loading, messagesEndRef }) {
         return (
           <div>
-            <div className="chat-container bg-white rounded p-3 mb-3" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+            <div className="chat-container bg-white rounded p-3 mb-2" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
               {messages.map(msg => (
-                <div key={msg.id} className={`mb-3 ${msg.role === 'user' ? 'text-end' : ''}`}>
-                  <div className={`d-inline-block p-2 rounded ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-light'}`} style={{ maxWidth: '85%', whiteSpace: 'pre-wrap', textAlign: 'left' }}>
+                <div key={msg.id} className={`d-flex ${msg.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
+                  <div className={`chat-bubble ${msg.role}`}>
                     {msg.content}
                   </div>
                 </div>
               ))}
               {loading && (
-                <div className="text-muted">
-                  <span className="spinner-border spinner-border-sm me-2"></span>
-                  分析中...
+                <div className="d-flex justify-content-start">
+                  <div className="chat-bubble assistant">
+                    <span className="loading-dots">分析中</span>
+                  </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
             
-            <div className="input-group">
-              <input 
-                type="text" 
-                className="form-control" 
-                placeholder="輸入你的交易，例如：我買了 100 股 TSLA"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              />
-              <button className="btn btn-primary" onClick={handleSend} disabled={loading}>
-                {loading ? <span className="spinner-border spinner-border-sm"></span> : '發送'}
-              </button>
+            <div className="input-wrapper">
+              <div className="input-group">
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="輸入你的交易，例如：我買了 100 股 TSLA"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                />
+                <button className="btn btn-primary" onClick={handleSend} disabled={loading}>
+                  {loading ? <span className="spinner-border spinner-border-sm"></span> : <><i className="bi bi-send me-1"></i>發送</>}
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -366,10 +874,10 @@
       function TradesTab({ trades }) {
         if (!trades || trades.length === 0) {
           return (
-            <div className="text-center text-muted py-5">
-              <i className="bi bi-journal-text" style={{ fontSize: '3rem' }}></i>
-              <p className="mt-3">尚無交易記錄</p>
-              <p>到「對話」頁面告訴我你的第一筆交易！</p>
+            <div className="empty-state">
+              <i className="bi bi-journal-text"></i>
+              <p className="mt-3 mb-1" style={{ fontSize: '1.1rem', color: 'var(--neutral-600)' }}>尚無交易記錄</p>
+              <p style={{ fontSize: '0.9rem' }}>到「對話」頁面告訴我你的第一筆交易！</p>
             </div>
           );
         }
@@ -399,15 +907,15 @@
                 )}
                 
                 {trade.rsi && (
-                  <div className="mt-2 small">
+                  <div className="mt-2 small text-muted">
                     RSI: {trade.rsi.toFixed(1)} | 趨勢: {trade.trend}
                   </div>
                 )}
                 
                 {(trade.stop_loss || trade.target_1) && (
-                  <div className="mt-2 d-flex gap-2">
-                    {trade.stop_loss && <span className="badge bg-warning">🛡️ 停損 ${trade.stop_loss}</span>}
-                    {trade.target_1 && <span className="badge bg-success">🎯 目標 ${trade.target_1}</span>}
+                  <div className="mt-2 d-flex gap-2 flex-wrap">
+                    {trade.stop_loss && <span className="badge bg-warning text-dark"><i className="bi bi-shield-check me-1"></i>停損 ${trade.stop_loss}</span>}
+                    {trade.target_1 && <span className="badge bg-success"><i className="bi bi-bullseye me-1"></i>目標 ${trade.target_1}</span>}
                   </div>
                 )}
               </div>
@@ -417,6 +925,8 @@
       }
       
       function StatsTab({ trades, portfolio }) {
+        const [selectedTicker, setSelectedTicker] = useState(null);
+        
         // Portfolio Summary
         const totalAssets = portfolio?.total_assets || 0;
         const cash = portfolio?.cash || 0;
@@ -425,12 +935,89 @@
         const totalPnlPct = portfolio?.total_pnl_pct || 0;
         const positions = portfolio?.positions || [];
         
+        // 趨勢判斷
+        const trend = totalPnl >= 0 ? 'up' : 'down';
+        
+        // 載入 K 線圖
+        useEffect(() => {
+          if (selectedTicker) {
+            loadChart(selectedTicker);
+          }
+        }, [selectedTicker]);
+        
+        const loadChart = async (ticker) => {
+          try {
+            const res = await axios.get(`${API_BASE}/chart/${ticker}`);
+            if (res.data && res.data.length > 0) {
+              const dates = res.data.map(d => d.date);
+              const opens = res.data.map(d => d.open);
+              const highs = res.data.map(d => d.high);
+              const lows = res.data.map(d => d.low);
+              const closes = res.data.map(d => d.close);
+              const volumes = res.data.map(d => d.volume);
+              
+              // K 線圖
+              const trace1 = {
+                type: 'candlestick',
+                x: dates,
+                high: highs,
+                low: lows,
+                open: opens,
+                close: closes,
+                name: ticker,
+                increasing: { line: { color: '#10B981' } },
+                decreasing: { line: { color: '#EF4444' } }
+              };
+              
+              // 成交量
+              const trace2 = {
+                type: 'bar',
+                x: dates,
+                y: volumes,
+                name: '成交量',
+                marker: {
+                  color: closes.map((c, i) => i > 0 && c >= closes[i-1] ? '#10B981' : '#EF4444'),
+                  opacity: 0.5
+                }
+              };
+              
+              Plotly.newPlot('kline-chart', [trace1], {
+                responsive: true,
+                margin: { t: 20, r: 20, b: 40, l: 60 },
+                xaxis: { rangeslider: { visible: false } },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)'
+              });
+              
+              Plotly.newPlot('volume-chart', [trace2], {
+                responsive: true,
+                margin: { t: 10, r: 20, b: 40, l: 60 },
+                height: 100,
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)'
+              });
+            }
+          } catch (e) {
+            console.log('Chart data not available');
+          }
+        };
+        
         const pnlClass = totalPnl >= 0 ? 'text-success' : 'text-danger';
+        
+        // 交易統計計算
+        const totalTrades = trades?.length || 0;
+        const buyCount = trades?.filter(t => t.action === 'BUY').length || 0;
+        const sellCount = trades?.filter(t => t.action === 'SELL').length || 0;
+        const scoreCounts = trades?.reduce((acc, t) => {
+          const score = t.score || 3;
+          acc[score] = (acc[score] || 0) + 1;
+          return acc;
+        }, {}) || {};
         
         return (
           <div>
             {/* 總資產儀表板 */}
-            <div className="card mb-4" style={{ background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', color: 'white' }}>
+            <div className="card portfolio-card mb-4">
               <div className="card-body">
                 <div className="row text-center">
                   <div className="col-4">
@@ -446,21 +1033,55 @@
                     <h4 className="mb-0">${stockValue.toLocaleString()}</h4>
                   </div>
                 </div>
-                <hr className="border-light" />
+                <hr />
                 <div className="text-center">
                   <div className="text-white-50 small">總損益</div>
-                  <h2 className={`mb-0 ${pnlClass}`}>
+                  <h2 className={`mb-0 ${pnlClass}`} style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
                     {totalPnl >= 0 ? '+' : ''}${totalPnl.toLocaleString()} ({totalPnlPct.toFixed(2)}%)
+                    <span className={`trend-icon ms-2 ${trend === 'up' ? 'text-white' : ''}`} style={{ fontSize: '1.2rem' }}>
+                      {trend === 'up' ? <i className="bi bi-graph-up-arrow"></i> : <i className="bi bi-graph-down-arrow"></i>}
+                    </span>
                   </h2>
                 </div>
               </div>
             </div>
             
+            {/* K 線圖區塊 */}
+            {positions.length > 0 && (
+              <div className="chart-container mb-4">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <h6 className="mb-0"><i className="bi bi-candles me-2"></i>K 線圖</h6>
+                  <select 
+                    className="form-select form-select-sm" 
+                    style={{ width: 'auto' }}
+                    value={selectedTicker || ''}
+                    onChange={(e) => setSelectedTicker(e.target.value)}
+                  >
+                    <option value="">選擇股票...</option>
+                    {positions.map(pos => (
+                      <option key={pos.ticker} value={pos.ticker}>{pos.ticker}</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedTicker ? (
+                  <>
+                    <div id="kline-chart" style={{ height: '300px' }}></div>
+                    <div id="volume-chart"></div>
+                  </>
+                ) : (
+                  <div className="empty-state py-4">
+                    <i className="bi bi-candles"></i>
+                    <p className="mt-2 mb-0">選擇股票查看 K 線圖</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
             {/* 持股明細 */}
             {positions.length > 0 && (
               <div className="card mb-4">
-                <div className="card-header">
-                  <h6 className="mb-0">📊 持股明細</h6>
+                <div className="card-header bg-transparent">
+                  <h6 className="mb-0"><i className="bi bi-list-ul me-2"></i>持股明細</h6>
                 </div>
                 <div className="card-body p-0">
                   <div className="table-responsive">
@@ -476,18 +1097,26 @@
                         </tr>
                       </thead>
                       <tbody>
-                        {positions.map((pos, idx) => (
-                          <tr key={idx}>
-                            <td><strong>{pos.ticker}</strong></td>
-                            <td className="text-end">{pos.quantity}</td>
-                            <td className="text-end">${pos.entry_price}</td>
-                            <td className="text-end">${pos.current_price}</td>
-                            <td className="text-end">${pos.value?.toLocaleString()}</td>
-                            <td className={`text-end ${pos.pnl >= 0 ? 'text-success' : 'text-danger'}`}>
-                              {pos.pnl >= 0 ? '+' : ''}{pos.pnl?.toFixed(2)}
-                            </td>
-                          </tr>
-                        ))}
+                        {positions.map((pos, idx) => {
+                          const isPositive = pos.pnl >= 0;
+                          return (
+                            <tr key={idx} className={isPositive ? 'pnl-bg-positive' : 'pnl-bg-negative'} style={{ opacity: 0.8 }}>
+                              <td>
+                                <strong>{pos.ticker}</strong>
+                                {pos.trend === 'up' && <i className="bi bi-graph-up-arrow trend-up ms-1"></i>}
+                                {pos.trend === 'down' && <i className="bi bi-graph-down-arrow trend-down ms-1"></i>}
+                              </td>
+                              <td className="text-end">{pos.quantity}</td>
+                              <td className="text-end">${pos.entry_price}</td>
+                              <td className="text-end">${pos.current_price}</td>
+                              <td className="text-end">${pos.value?.toLocaleString()}</td>
+                              <td className={`text-end ${isPositive ? 'pnl-positive' : 'pnl-negative'}`}>
+                                {isPositive ? '+' : ''}{pos.pnl?.toFixed(2)}
+                                <small className="d-block">{isPositive ? '+' : ''}{pos.pnl_pct?.toFixed(1)}%</small>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -496,33 +1125,33 @@
             )}
             
             {/* 交易統計 */}
-            <div className="row g-3 mb-4">
+            <div className="row g-3 mb-4 stats-grid">
               <div className="col-6">
-                <div className="card text-center">
+                <div className="card text-center h-100">
                   <div className="card-body">
-                    <h3 className="mb-0">{totalTrades}</h3>
+                    <h3 className="mb-0 text-primary">{totalTrades}</h3>
                     <small className="text-muted">總交易次數</small>
                   </div>
                 </div>
               </div>
               <div className="col-6">
-                <div className="card text-center">
+                <div className="card text-center h-100">
                   <div className="card-body">
-                    <h3 className="mb-0">{buyCount}</h3>
+                    <h3 className="mb-0" style={{ color: 'var(--success)' }}>{buyCount}</h3>
                     <small className="text-muted">買入次數</small>
                   </div>
                 </div>
               </div>
               <div className="col-6">
-                <div className="card text-center">
+                <div className="card text-center h-100">
                   <div className="card-body">
-                    <h3 className="mb-0">{sellCount}</h3>
+                    <h3 className="mb-0" style={{ color: 'var(--danger)' }}>{sellCount}</h3>
                     <small className="text-muted">賣出次數</small>
                   </div>
                 </div>
               </div>
               <div className="col-6">
-                <div className="card text-center">
+                <div className="card text-center h-100">
                   <div className="card-body">
                     <h3 className="mb-0">{portfolio?.positions?.length || 0}</h3>
                     <small className="text-muted">目前持股</small>
@@ -531,20 +1160,21 @@
               </div>
             </div>
             
+            {/* 進場品質分布 */}
             <div className="card">
-              <div className="card-header">
-                <h6 className="mb-0">⭐ 進場品質分布</h6>
+              <div className="card-header bg-transparent">
+                <h6 className="mb-0"><i className="bi bi-star me-2"></i>進場品質分布</h6>
               </div>
               <div className="card-body">
                 {[5,4,3,2,1].map(score => (
-                  <div key={score} className="d-flex align-items-center mb-2">
-                    <span className="me-2" style={{ width: '60px' }}>{'⭐'.repeat(score)}</span>
+                  <div key={score} className="d-flex align-items-center mb-3">
+                    <span className="me-2" style={{ width: '70px' }}>{'⭐'.repeat(score)}</span>
                     <div className="flex-grow-1">
-                      <div className="progress" style={{ height: '8px' }}>
+                      <div className="progress" style={{ height: '10px' }}>
                         <div className="progress-bar" style={{ width: `${totalTrades ? (scoreCounts[score] / totalTrades * 100) : 0}%` }}></div>
                       </div>
                     </div>
-                    <span className="ms-2 text-muted" style={{ width: '30px' }}>{scoreCounts[score]}</span>
+                    <span className="ms-2 text-muted" style={{ width: '30px' }}>{scoreCounts[score] || 0}</span>
                   </div>
                 ))}
               </div>
