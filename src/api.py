@@ -267,6 +267,94 @@ def get_portfolio():
     return jsonify({'positions': [], 'cash': 0})
 
 
+@app.route('/api/portfolio/summary')
+def portfolio_summary():
+    """Get portfolio summary with total assets and P&L"""
+    # Get trades
+    trades = []
+    for f in TRADES_DIR.glob('*.json'):
+        with open(f, 'r', encoding='utf-8') as fp:
+            trades.append(json.load(fp))
+    
+    if not trades:
+        return jsonify({
+            'cash': 5000,
+            'stock_value': 0,
+            'total_assets': 5000,
+            'total_cost': 0,
+            'total_pnl': 0,
+            'total_pnl_pct': 0,
+            'positions': []
+        })
+    
+    # Aggregate positions from trades
+    positions = {}
+    total_cost = 0
+    
+    for trade in trades:
+        ticker = trade.get('ticker', '').upper()
+        action = trade.get('action', '').lower()
+        quantity = int(trade.get('quantity', 0))
+        price = float(trade.get('entry_price', 0) or trade.get('price', 0))
+        
+        if not ticker:
+            continue
+            
+        if ticker not in positions:
+            positions[ticker] = {'quantity': 0, 'cost': 0}
+        
+        if action == 'buy':
+            positions[ticker]['quantity'] += quantity
+            positions[ticker]['cost'] += quantity * price
+            total_cost += quantity * price
+        elif action == 'sell':
+            positions[ticker]['quantity'] -= quantity
+            positions[ticker]['cost'] -= quantity * price
+            total_cost -= quantity * price
+    
+    # Get current prices and calculate P&L
+    stock_value = 0
+    position_details = []
+    
+    for ticker, pos in positions.items():
+        if pos['quantity'] > 0:
+            current_price_data = get_stock_price(ticker)
+            if 'error' not in current_price_data:
+                current_price = current_price_data['current_price']
+                current_value = pos['quantity'] * current_price
+                pnl = current_value - pos['cost']
+                pnl_pct = (pnl / pos['cost'] * 100) if pos['cost'] > 0 else 0
+                
+                stock_value += current_value
+                
+                position_details.append({
+                    'ticker': ticker,
+                    'quantity': pos['quantity'],
+                    'entry_price': round(pos['cost'] / pos['quantity'], 2),
+                    'current_price': round(current_price, 2),
+                    'value': round(current_value, 2),
+                    'cost': round(pos['cost'], 2),
+                    'pnl': round(pnl, 2),
+                    'pnl_pct': round(pnl_pct, 2)
+                })
+    
+    cash = 5000  # Default cash
+    total_assets = cash + stock_value
+    total_pnl = total_assets - total_cost - cash
+    total_pnl_pct = (total_pnl / total_cost * 100) if total_cost > 0 else 0
+    
+    return jsonify({
+        'cash': cash,
+        'stock_value': round(stock_value, 2),
+        'total_assets': round(total_assets, 2),
+        'total_cost': round(total_cost, 2),
+        'total_pnl': round(total_pnl, 2),
+        'total_pnl_pct': round(total_pnl_pct, 2),
+        'positions': position_details,
+        'updated_at': datetime.now().isoformat()
+    })
+
+
 @app.route('/api/batch-quote')
 def batch_quote():
     """Batch quote for multiple tickers"""

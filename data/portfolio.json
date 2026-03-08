@@ -1,6 +1,14 @@
 {
-  "positions": [],
-  "cash": 0,
-  "total_value": 0,
-  "created_at": "2026-03-07"
+  "positions": [
+    {"ticker": "TSM", "qty": 13, "entry_price": 338.89, "current_price": 338.89},
+    {"ticker": "SOXL", "qty": 10, "entry_price": 47.89, "current_price": 47.89},
+    {"ticker": "AAOI", "qty": 15, "entry_price": 95.58, "current_price": 95.58},
+    {"ticker": "ONDS", "qty": 100, "entry_price": 9.83, "current_price": 9.83}
+  ],
+  "cash": 5000,
+  "total_cost": 12301.17,
+  "total_value": 12301.17,
+  "total_pnl": 0,
+  "total_pnl_pct": 0,
+  "updated_at": "2026-03-08T12:20:00"
 }

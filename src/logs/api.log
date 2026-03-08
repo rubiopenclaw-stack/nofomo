@@ -203,3 +203,10 @@
 2026-03-08 11:18:20,753 - INFO - Get trades: 6 records
 2026-03-08 11:18:20,753 - INFO - 127.0.0.1 - - [08/Mar/2026 11:18:20] "GET /api/trades HTTP/1.1" 200 -
 2026-03-08 11:18:20,838 - INFO - 127.0.0.1 - - [08/Mar/2026 11:18:20] "GET /api/portfolio HTTP/1.1" 200 -
+2026-03-08 12:22:05,179 - INFO - Portfolio perf: value=6822.270210266113 cost=0.0 pnl=6822.270210266113
+2026-03-08 12:22:05,179 - INFO - 127.0.0.1 - - [08/Mar/2026 12:22:05] "GET /api/portfolio/performance HTTP/1.1" 200 -
+2026-03-08 12:33:58,247 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
+2026-03-08 12:33:58,529 - INFO -  * Restarting with stat
+2026-03-08 12:33:59,623 - WARNING -  * Debugger is active!
+2026-03-08 12:33:59,645 - INFO -  * Debugger PIN: 129-705-764
+2026-03-08 12:34:19,005 - INFO - 127.0.0.1 - - [08/Mar/2026 12:34:19] "GET /api/portfolio/summary HTTP/1.1" 200 -
