@@ -152,3 +152,28 @@
 2026-03-08 04:03:57,790 - INFO - 127.0.0.1 - - [08/Mar/2026 04:03:57] "GET /api/signals HTTP/1.1" 200 -
 2026-03-08 04:04:00,526 - INFO - Trades analysis: 4 trades
 2026-03-08 04:04:00,526 - INFO - 127.0.0.1 - - [08/Mar/2026 04:04:00] "GET /api/trades/analysis HTTP/1.1" 200 -
+2026-03-08 07:06:17,344 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.33.10:5000
+2026-03-08 07:06:17,344 - INFO - [33mPress CTRL+C to quit[0m
+2026-03-08 07:06:17,347 - INFO -  * Restarting with stat
+2026-03-08 07:06:18,471 - WARNING -  * Debugger is active!
+2026-03-08 07:06:18,507 - INFO -  * Debugger PIN: 129-705-764
+2026-03-08 07:06:58,507 - INFO - 127.0.0.1 - - [08/Mar/2026 07:06:58] "GET / HTTP/1.1" 200 -
+2026-03-08 07:10:18,888 - INFO - 127.0.0.1 - - [08/Mar/2026 07:10:18] "GET / HTTP/1.1" 200 -
+2026-03-08 07:10:19,986 - INFO - Get trades: 4 records
+2026-03-08 07:10:19,986 - INFO - 127.0.0.1 - - [08/Mar/2026 07:10:19] "GET /api/trades HTTP/1.1" 200 -
+2026-03-08 07:10:20,021 - INFO - 127.0.0.1 - - [08/Mar/2026 07:10:20] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-03-08 07:10:20,324 - INFO - 127.0.0.1 - - [08/Mar/2026 07:10:20] "GET /api/portfolio HTTP/1.1" 200 -
+2026-03-08 07:10:39,070 - INFO - Quote request: SOXL
+2026-03-08 07:10:39,905 - INFO - 127.0.0.1 - - [08/Mar/2026 07:10:39] "GET /api/quote?ticker=SOXL HTTP/1.1" 200 -
+2026-03-08 07:10:40,677 - INFO - New trade added: SOXL SELL 20
+2026-03-08 07:10:40,677 - INFO - 127.0.0.1 - - [08/Mar/2026 07:10:40] "POST /api/trades HTTP/1.1" 200 -
+2026-03-08 07:10:40,726 - INFO - Get trades: 5 records
+2026-03-08 07:10:40,726 - INFO - 127.0.0.1 - - [08/Mar/2026 07:10:40] "GET /api/trades HTTP/1.1" 200 -
+2026-03-08 07:10:40,776 - INFO - 127.0.0.1 - - [08/Mar/2026 07:10:40] "GET /api/portfolio HTTP/1.1" 200 -
+2026-03-08 11:04:36,643 - INFO -  * Detected change in '/Users/liyuzhan/.openclaw/workspace/nofomo/src/api.py', reloading
+2026-03-08 11:04:37,064 - INFO -  * Restarting with stat
+2026-03-08 11:04:38,184 - WARNING -  * Debugger is active!
+2026-03-08 11:04:38,206 - INFO -  * Debugger PIN: 129-705-764

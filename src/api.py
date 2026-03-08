@@ -35,7 +35,8 @@ TRADES_DIR.mkdir(parents=True, exist_ok=True)
 
 # Simple in-memory cache
 _price_cache = {}
-_cache_ttl = 60  # 60 seconds TTL for prices
+_cache_ttl_price = 60  # 60 seconds TTL for stock prices
+_cache_ttl_analysis = 300  # 5 minutes TTL for technical analysis
 _watchlist = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'JPM', 'V', 'WMT']  # Default watchlist
 
 
@@ -44,7 +45,9 @@ def _get_cached(ticker, cache_type='price'):
     key = f"{cache_type}:{ticker.upper()}"
     if key in _price_cache:
         data, timestamp = _price_cache[key]
-        if time.time() - timestamp < _cache_ttl:
+        # Use different TTL based on cache type
+        ttl = _cache_ttl_analysis if cache_type == 'analysis' else _cache_ttl_price
+        if time.time() - timestamp < ttl:
             return data
     return None
 
