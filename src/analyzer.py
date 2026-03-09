@@ -38,7 +38,7 @@ def get_stock_history(ticker: str, period: str = '3mo') -> pd.DataFrame:
     try:
         stock = yf.Ticker(ticker)
         return stock.history(period=period)
-    except:
+    except Exception as e:
         return pd.DataFrame()
 
 
@@ -83,11 +83,19 @@ def calculate_macd(df: pd.DataFrame) -> Dict:
     signal = macd.ewm(span=9, adjust=False).mean()
     histogram = macd - signal
     
+    # MACD crossover 判斷
+    crossover = 'NEUTRAL'
+    if len(macd) >= 2 and len(signal) >= 2:
+        if macd.iloc[-1] > signal.iloc[-1] and macd.iloc[-2] < signal.iloc[-2]:
+            crossover = 'GOLDEN'
+        elif macd.iloc[-1] < signal.iloc[-1] and macd.iloc[-2] > signal.iloc[-2]:
+            crossover = 'DEAD'
+    
     return {
         'macd': macd.iloc[-1],
         'signal': signal.iloc[-1],
         'histogram': histogram.iloc[-1],
-        'crossover': 'GOLDEN' if macd.iloc[-1] > signal.iloc[-1] and macd.iloc[-2] < signal.iloc[-2] else 'DEAD' if macd.iloc[-1] < signal.iloc[-1] and macd.iloc[-2] > signal.iloc[-2] else 'NEUTRAL'
+        'crossover': crossover
     }
 
 
@@ -151,7 +159,7 @@ def technical_analysis(ticker: str) -> Dict:
         score += 1
     
     # RSI
-    if rsi:
+    if rsi is not None:
         if rsi < 30:
             score += 2  # 超賣
         elif rsi > 70:

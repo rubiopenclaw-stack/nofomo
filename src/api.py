@@ -340,6 +340,12 @@ def add_trade():
     if not data:
         return jsonify({'error': 'Missing request body'}), 400
 
+    # 必填欄位驗證
+    required = ['ticker', 'action', 'quantity', 'entry_price']
+    missing = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({'error': f'Missing fields: {missing}'}), 400
+
     # 含微秒避免同秒衝突
     trade_id = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
     data['id'] = trade_id
@@ -510,7 +516,13 @@ def set_alert():
         return jsonify({'error': 'Missing request body'}), 400
 
     ticker = data.get('ticker', '').upper()
-    target_price = float(data.get('target_price', 0))
+    
+    # 輸入驗證
+    try:
+        target_price = float(data.get('target_price', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid target_price'}), 400
+    
     condition = data.get('condition', 'above')
 
     if not ticker or target_price <= 0:

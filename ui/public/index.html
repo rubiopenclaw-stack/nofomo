@@ -638,15 +638,17 @@
               return `✅ 買入記錄已儲存！
 
 📊 ${ticker} (${priceData.name})
-• 現價: $${priceData.current_price.toFixed(2)}
-• 52週: $${priceData.week52_low} - $${priceData.week52_high}
+💰 現價: $${priceData.current_price.toFixed(2)}
+📊 52週: $${priceData.week52_low} - $${priceData.week52_high}
 
-📈 技術分析：
+📈 技術分析
+━━━━━━━━━━━━━━━━━━━━
 • RSI: ${analysis.rsi?.toFixed(1)}
 • 趨勢: ${analysis.trend}
 • MA20: $${analysis.ma20?.toFixed(2)}
 
-💡 建議：
+💡 建議
+━━━━━━━━━━━━━━━━━━━━
 • 停損: $${analysis.stop_loss}
 • 目標1: $${analysis.target_1}
 • 目標2: $${analysis.target_2}
@@ -696,8 +698,9 @@
               return `✅ 賣出記錄已儲存！
 
 📊 ${ticker}
-• 賣價: $${sellPrice.toFixed(2)}
-• 股數: ${quantity}
+━━━━━━━━━━━━━━━━━━━━
+💰 賣價: $${sellPrice.toFixed(2)}
+📈 股數: ${quantity}
 
 📈 此筆交易已平倉`;
               
@@ -722,17 +725,19 @@
               }
               
               return `📊 ${tickerMatch[1]} (${priceData.name})
-
+━━━━━━━━━━━━━━━━━━━━
 💰 現價: $${priceData.current_price.toFixed(2)}
 📊 52週: $${priceData.week52_low} - $${priceData.week52_high}
 
-📈 技術分析：
+📈 技術分析
+━━━━━━━━━━━━━━━━━━━━
 • RSI: ${analysis.rsi?.toFixed(1)}
 • MA5: $${analysis.ma5?.toFixed(2)}
 • MA20: $${analysis.ma20?.toFixed(2)}
 • 趨勢: ${analysis.trend}
 
-💡 建議: ${analysis.suggestion}
+💡 建議
+━━━━━━━━━━━━━━━━━━━━
 • 停損: $${analysis.stop_loss}
 • 目標: $${analysis.target_1}
 

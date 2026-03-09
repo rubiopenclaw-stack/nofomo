@@ -1,0 +1,21 @@
+{
+  "date": "2026-03-08 12:35",
+  "ticker": "MRVL",
+  "action": "BUY",
+  "entry_price": 89.56999969482422,
+  "quantity": 10,
+  "total_value": 895.6999969482422,
+  "current_price": 89.56999969482422,
+  "score": 5,
+  "rating": "⭐⭐⭐⭐⭐",
+  "suggestion": "強烈買入",
+  "stop_loss": 85.09,
+  "target_1": 98.53,
+  "target_2": 107.48,
+  "reason": "買了MRVL 10股",
+  "rsi": 67.65464585853218,
+  "trend": "BULLISH",
+  "status": "HOLDING",
+  "id": "20260308_203536_804038",
+  "created_at": "2026-03-08T20:35:36.804069"
+}

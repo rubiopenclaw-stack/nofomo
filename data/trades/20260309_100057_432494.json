@@ -1,0 +1,21 @@
+{
+  "date": "2026-03-09 02:00",
+  "ticker": "TSLA",
+  "action": "BUY",
+  "entry_price": 396.7300109863281,
+  "quantity": 10,
+  "total_value": 3967.3001098632812,
+  "current_price": 396.7300109863281,
+  "score": 2,
+  "rating": "⭐⭐",
+  "suggestion": "謹慎操作",
+  "stop_loss": 376.89,
+  "target_1": 436.4,
+  "target_2": 476.08,
+  "reason": "買了10股TSLA",
+  "rsi": 38.07989792581002,
+  "trend": "BEARISH",
+  "status": "HOLDING",
+  "id": "20260309_100057_432494",
+  "created_at": "2026-03-09T10:00:57.432535"
+}
