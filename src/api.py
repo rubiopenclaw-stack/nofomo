@@ -556,6 +556,7 @@ def clear_alerts():
 @app.route('/api/alerts/check')
 def check_alerts():
     triggered = []
+    any_changed = False
 
     for ticker, alerts in _price_alerts.items():
         current = get_stock_price(ticker)
@@ -563,7 +564,6 @@ def check_alerts():
             continue
 
         price = current['current_price']
-        changed = False
         for alert in alerts:
             if alert['triggered']:
                 continue
@@ -582,10 +582,11 @@ def check_alerts():
                     'condition': alert['condition'],
                     'current_price': price
                 })
-                changed = True
+                any_changed = True
 
-        if changed:
-            _save_alerts(_price_alerts)
+    # 統一儲存（避免每個 ticker 都寫一次）
+    if any_changed:
+        _save_alerts(_price_alerts)
 
     logger.info(f'Alerts checked: {len(triggered)} triggered')
     return jsonify({'triggered': triggered, 'timestamp': datetime.now().isoformat()})
